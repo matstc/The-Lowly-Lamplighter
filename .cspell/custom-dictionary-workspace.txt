@@ -1,0 +1,14 @@
+# Custom Dictionary Words
+ARRO
+btnp
+cartdata
+circfill
+dget
+dset
+lvls
+MXTXC
+PICO
+pset
+rectfill
+redir
+redirections

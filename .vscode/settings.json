@@ -1,0 +1,37 @@
+{
+  "Lua.diagnostics.globals": [
+		"_draw",
+		"_init",
+		"_update",
+		"add",
+		"all",
+		"btnp",
+		"circfill",
+		"del",
+		"flr",
+		"pal",
+		"pset",
+		"rect",
+		"rectfill",
+		"rnd",
+		"sub",
+    "btn",
+    "cartdata",
+    "cls",
+    "dget",
+    "dset",
+    "music",
+    "poke",
+    "sfx",
+    "stat",
+    "spr"
+  ],
+  "cSpell.customDictionaries": {
+    "custom-dictionary-workspace": {
+      "name": "custom-dictionary-workspace",
+      "path": "${workspaceFolder:the-lowly-lamplighter}/.cspell/custom-dictionary-workspace.txt",
+      "addWords": true,
+      "scope": "workspace"
+    }
+  }
+}
