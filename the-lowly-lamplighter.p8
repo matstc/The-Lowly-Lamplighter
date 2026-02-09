@@ -3,74 +3,74 @@ version 43
 __lua__
 -- the lowly lamplighter
 -- by mxtxc
-grid_x = 11
-grid_y = 11
-grid_size = 11
-cursor_x = flr((grid_size + 1) / 2)
-cursor_y = flr((grid_size + 1) / 2)
-grid_start_x = 5
-grid_start_y = 9
-lvl = {}
-remaining_pokes = 0
-game_state = "title"
-raindrops = {}
-rain_speed = 1
-rain_move_interval = 4
-rain_frame_counter = 0
-world_index = 1
-world_picker_sel = "world"
-settings_sel = 1
-particles_enabled = true
-coordinates_enabled = false
-music_enabled = true
-lvls = {}
-pokes = {}
-fire = {x = nil, y = nil}
-turn_time = false
-turn_timer = 0
-fire_dir = nil
-lvl_timer = 0
-lvl_index = 1
-success_sound_played = false
-fail_sound_played = false
-goal_lit = false
-frames_in_step = 12
-step_counter = 0
-max_steps = 30
-pre_turn_pokes = nil
-fire_animation_timer = 0
-fire_animation_sprites = {8,9,10}
-blink_timer = 0
-burst_radius = 0
-fire_fail_animation_frame = 0
-fire_fail_animation_sprites = {26, 27, 28}
-fire_visible = true
-burst_active = false
-burst_speed = 3.5
-current_text = ""
-all_worlds_completed = false
-step_sfx = 60
-failure_sfx = 62
-success_sfx = 63
-menu_action_sfx = 57
-nav_sfx = 59
-cursor_colors = {5,6,7}
-cursor_step = 1
-cursor_steps_per_frame = 10
-flash = nil
-flash_frames = 0
-help_text_colors = {5,6,7}
-help_text_color_step = 1
-help_text_color_steps = 10
-nudges = {}
-blinking_pokes = {}
-blinking_step = 1
-blinking_steps = 8
-delete_save_data_button_label = "delete save data"
-toggle_music_button_label = "disable music"
-z_press_count = 0
-z_press_timer = 0
-large_alphabet = {
+pico8_width = 128
+pico8_height = 128
+local grid_x = 11
+local grid_y = 11
+local grid_size = 11
+local cursor_x = flr((grid_size + 1) / 2)
+local cursor_y = flr((grid_size + 1) / 2)
+local grid_start_x = 5
+local grid_start_y = 9
+local lvl = {}
+local remaining_pokes = 0
+local game_state = "title"
+local raindrops = {}
+local rain_speed = 1
+local rain_move_interval = 4
+local rain_frame_counter = 0
+local world_idx = 1
+local world_picker_sel = "world"
+local settings_sel = 1
+local particles_enabled = true
+local coordinates_enabled = false
+local music_enabled = true
+local lvls = {}
+local pokes = {}
+local fire = {x = nil, y = nil}
+local turn_time = false
+local turn_timer = 0
+local fire_dir = nil
+local lvl_timer = 0
+local lvl_idx = 1
+local success_sound_played = false
+local failure_sound_played = false
+local goal_lit = false
+local frames_in_step = 12
+local step_counter = 0
+local max_steps = 30
+local pre_turn_pokes = nil
+local fire_animation_timer = 0
+local fire_animation_sprites = {8,9,10}
+local blink_timer = 0
+local burst_radius = 0
+local fire_fail_animation_frame = 0
+local fire_fail_animation_sprites = {26, 27, 28}
+local fire_visible = true
+local burst_active = false
+local burst_speed = 3.5
+local current_text = ""
+local all_worlds_completed = false
+local step_sfx = 60
+local failure_sfx = 62
+local success_sfx = 63
+local menu_action_sfx = 57
+local nav_sfx = 59
+local cursor_colors = {5,6,7}
+local cursor_step = 1
+local cursor_steps_per_frame = 10
+local flash = nil
+local flash_frames = 0
+local help_text_colors = {5,6,7}
+local help_text_color_step = 1
+local help_text_color_steps = 10
+local nudges = {}
+local blinking_pokes = {}
+local blinking_step = 1
+local blinking_steps = 8
+local delete_save_data_button_label = "delete save data"
+local toggle_music_button_label = "disable music"
+local large_alphabet = {
  ["a"]={0xff,0xff,0xc3,0xc3,0xc3,0xc3,0xff,0xff,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3},
  ["b"]={0xfe,0xff,0xc3,0xc3,0xc3,0xfe,0xfe,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xff,0xfe,0xfe},
  ["c"]={0xff,0xff,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xff,0xff},
@@ -1456,8 +1456,8 @@ function reset_lvl(next_lvl)
 
   if next_lvl then
     pre_turn_pokes = nil
-    lvl_index = lvl_index + 1
-    if lvl_index > #lvls then
+    lvl_idx = lvl_idx + 1
+    if lvl_idx > #lvls then
       set_completed_from_lvl_data()
 
       if all_worlds_completed then
@@ -1469,6 +1469,7 @@ function reset_lvl(next_lvl)
       return
     end
 
+    -- check if next lvl has intro text
     if lvls[lvl_index].intro then
       current_text = lvls[lvl_index].intro
       game_state = "lvl_intro"
@@ -1476,7 +1477,7 @@ function reset_lvl(next_lvl)
     end
   end
 
-  lvl = lvls[lvl_index] or lvls[1]
+  lvl = lvls[lvl_idx] or lvls[1]
   fire = {
     x = lvl.fire[1],
     y = lvl.fire[2],
@@ -1511,37 +1512,46 @@ function reset_lvl(next_lvl)
   end
 end
 
-function check_cheat_codes()
+local function check_cheat_codes()
   if btnp(3, 1) then
     sfx(menu_action_sfx)
     reset_lvl(false)
     return true
   end
 
+local function skip_level_handler()
+  sfx(menu_action_sfx)
+  if lvl.outro then
+    current_text = lvl.outro
+    game_state = "lvl_outro"
+  else
+    reset_lvl(true)
+  end
+end
+
+local function skip_back_level_handler()
+  sfx(menu_action_sfx)
+  if lvl_idx > 1 then
+    lvl_idx = lvl_idx - 1
+    reset_lvl(false)
+  else
+    game_state = "world_picker"
+  end
+end
+
+local function check_cheat_codes()
+  if btnp(3, 1) then
+    reset_level_handler()
+    return true
+  end
+
   if btnp(2, 1) then
-    sfx(menu_action_sfx)
-    if lvl_index > 1 then
-      lvl_index = lvl_index - 1
-      reset_lvl(false)
-    else
-      game_state = "world_picker"
-    end
+    skip_back_level_handler()
+    return true
   end
 
-  if btnp(4, 0) then
-    z_press_count = z_press_count + 1
-  end
-
-  if btnp(1, 1) or z_press_count >= 5 then
-    z_press_count = 0
-    sfx(menu_action_sfx)
-    if lvl.outro then
-      current_text = lvl.outro
-      game_state = "lvl_outro"
-    else
-      reset_lvl(true)
-    end
-
+  if btnp(1, 1) then
+    skip_level_handler()
     return true
   end
 
@@ -1606,7 +1616,7 @@ function handle_inputs()
   end
 end
 
-function draw_obs()
+local function draw_obs()
   local obs_sprite = worlds[world_index].obs_sprite
   if lvl and lvl.obs then
     for _, obs in pairs(lvl.obs) do
@@ -1626,8 +1636,8 @@ function draw_fire()
       if fire_animation_timer >= frames_in_step * #fire_animation_sprites then
         fire_animation_timer = 0
       end
-      local fire_sprite_index = flr((fire_animation_timer / frames_in_step) % #fire_animation_sprites) + 1
-      sprite = fire_animation_sprites[fire_sprite_index]
+      local fire_sprite_idx = flr((fire_animation_timer / frames_in_step) % #fire_animation_sprites) + 1
+      sprite = fire_animation_sprites[fire_sprite_idx]
     end
 
     spr(sprite, grid_start_x + (fire.draw_x-1) * grid_x, grid_start_y + (fire.draw_y-1) * grid_y)
@@ -1681,10 +1691,10 @@ end
 
 function draw_word(word, start_x, start_y, color, outline)
   if outline then
-    draw_word(word, start_x - 1, start_y, worlds[world_index].bg_color, false)
-    draw_word(word, start_x + 1, start_y, worlds[world_index].bg_color, false)
-    draw_word(word, start_x, start_y - 1, worlds[world_index].bg_color, false)
-    draw_word(word, start_x, start_y + 1, worlds[world_index].bg_color, false)
+    draw_word(word, start_x - 1, start_y, worlds[world_idx].bg_color, false)
+    draw_word(word, start_x + 1, start_y, worlds[world_idx].bg_color, false)
+    draw_word(word, start_x, start_y - 1, worlds[world_idx].bg_color, false)
+    draw_word(word, start_x, start_y + 1, worlds[world_idx].bg_color, false)
   end
 
   local current_x = start_x
@@ -1911,7 +1921,7 @@ function draw_world_picker()
         completed_lvls = completed_lvls + 1
       end
     end
-    draw_button(world.name, completed_lvls.."/"..#world.lvls, x, y, rect_width, rect_height, world_index == i, is_world_completed(world) and 15 or 3)
+    draw_button(world.name, completed_lvls.."/"..#world.lvls, x, y, rect_width, rect_height, world_idx == i, is_world_completed(world) and 15 or 3)
   end
 
   local controls_y = start_y + #worlds * spacing + 12
@@ -1976,7 +1986,7 @@ end
 function spawn_raindrops()
   if not particles_enabled then return end
 
-  local spawn_chance = world_index <= #worlds and worlds[world_index].rain_density or 0.1
+  local spawn_chance = world_idx <= #worlds and worlds[world_idx].rain_density or 0.1
   if rnd(1) < spawn_chance then
       local drop = {
           x = flr(rnd(128)),
@@ -1986,7 +1996,7 @@ function spawn_raindrops()
   end
 end
 
-function draw_rain(rain_color)
+local function draw_rain(rain_color)
   local color = rain_color or world_index <= #worlds and worlds[world_index].rain_color or worlds[1].rain_color
 
   if color > 15 and game_state == "game" then
@@ -2029,17 +2039,12 @@ function _init()
 end
 
 function _update()
-  poke(0x5f30, 1) -- suppress menu
   spawn_raindrops()
-  blink_timer = blink_timer + 1
+  menuitem(1)
+  menuitem(2)
+  menuitem(3)
 
-  if z_press_count > 0 then
-    z_press_timer = z_press_timer + 1
-    if z_press_timer > 60 then
-      z_press_count = 0
-      z_press_timer = 0
-    end
-  end
+  blink_timer = blink_timer + 1
 
   if burst_active then
     burst_radius = burst_radius + burst_speed
@@ -2048,21 +2053,21 @@ function _update()
   rain_frame_counter = rain_frame_counter + 1
 
   if rain_frame_counter >= rain_move_interval then
-    local x_multiplier = 1
-    local y_multiplier = 1
-    local rain_dir = world_index <= #worlds and worlds[world_index].rain_dir or worlds[1].rain_dir
+    local x_mult = 1
+    local y_mult = 1
+    local rain_dir = world_idx <= #worlds and worlds[world_idx].rain_dir or worlds[1].rain_dir
 
     if rain_dir == "left" then
-      x_multiplier = -1
-      y_multiplier = 1
+      x_mult = -1
+      y_mult = 1
     elseif rain_dir == "right" then
-      x_multiplier = 1
-      y_multiplier = 1
+      x_mult = 1
+      y_mult = 1
     end
 
     for drop in all(raindrops) do
-      drop.x = drop.x + rain_speed * x_multiplier
-      drop.y = drop.y + rain_speed * y_multiplier
+      drop.x = drop.x + rain_speed * x_mult
+      drop.y = drop.y + rain_speed * y_mult
 
       if rnd(1) < 0.02 then
         del(raindrops, drop)
@@ -2085,11 +2090,11 @@ function _update()
   if game_state == "world_picker" then
     if btnp(2) then
       if world_picker_sel == "world" then
-        world_index = world_index - 1
-        if world_index < 1 then world_index = #worlds end
+        world_idx = world_idx - 1
+        if world_idx < 1 then world_idx = #worlds end
       elseif world_picker_sel == "controls" then
         world_picker_sel = "world"
-        world_index = #worlds
+        world_idx = #worlds
       elseif world_picker_sel == "settings" then
         world_picker_sel = "controls"
       end
@@ -2098,15 +2103,15 @@ function _update()
 
     if btnp(3) then
       if world_picker_sel == "world" then
-        world_index = world_index + 1
-        if world_index > #worlds then
+        world_idx = world_idx + 1
+        if world_idx > #worlds then
           world_picker_sel = "controls"
         end
       elseif world_picker_sel == "controls" then
         world_picker_sel = "settings"
       elseif world_picker_sel == "settings" then
         world_picker_sel = "world"
-        world_index = 1
+        world_idx = 1
       end
       sfx(nav_sfx)
     end
@@ -2119,12 +2124,12 @@ function _update()
       elseif world_picker_sel == "controls" then
         game_state = "controls_screen"
       else
-        lvls = worlds[world_index].lvls
-        lvl_index = 1
+        lvls = worlds[world_idx].lvls
+        lvl_idx = 1
 
         -- check if first lvl has intro text
-        if lvls[lvl_index].intro then
-          current_text = lvls[lvl_index].intro
+        if lvls[lvl_idx].intro then
+          current_text = lvls[lvl_idx].intro
           game_state = "lvl_intro"
         else
           game_state = "game"
@@ -2216,6 +2221,24 @@ function _update()
   if game_state == "game" then
     local cancel_update = check_cheat_codes()
     if cancel_update then return end
+
+    menuitem(1, "reset level",
+      function()
+        reset_level_handler()
+      end
+    )
+
+    menuitem(2, "skip level",
+      function()
+        skip_level_handler()
+      end
+    )
+
+    menuitem(3, "skip back",
+      function()
+        skip_back_level_handler()
+      end
+    )
   end
 
   if not turn_time then
@@ -2322,7 +2345,7 @@ function _draw()
   end
 
   if game_state == "world_picker" then
-    local bg = worlds[world_index] and worlds[world_index].bg_color or 129
+    local bg = worlds[world_idx] and worlds[world_idx].bg_color or 129
     if bg > 15 then
       pal(bg - 128, bg, 1)
     end
@@ -2350,7 +2373,7 @@ function _draw()
   end
 
   if game_state == "lvl_intro" or game_state == "lvl_outro" then
-    local bg = worlds[world_index].bg_color
+    local bg = worlds[world_idx].bg_color
     if bg > 15 then
       pal(bg - 128, bg, 1)
     end
@@ -2361,7 +2384,7 @@ function _draw()
   end
 
   -- in-game
-  local bg = worlds[world_index].bg_color
+  local bg = worlds[world_idx].bg_color
   if bg > 15 then
     pal(bg - 128, bg, 1)
   end
@@ -2375,12 +2398,12 @@ function _draw()
     end
   end
 
-  print("level "..world_index.."-"..lvl_index, grid_start_x - 1, 1, worlds[world_index].txt_color)
+  print("level "..world_idx.."-"..lvl_idx, grid_start_x - 1, 1, worlds[world_idx].txt_color)
   if coordinates_enabled then
-    print(cursor_x..","..cursor_y, 128/2 - 5, 1, worlds[world_index].txt_color)
+    print(cursor_x..","..cursor_y, pico8_width/2 - 5, 1, worlds[world_index].txt_color)
   end
-  print("poke", grid_start_x + 88, 1, worlds[world_index].txt_color)
-  print("s x"..remaining_pokes, grid_start_x + 104, 1, worlds[world_index].txt_color)
+  print("poke", grid_start_x + 88, 1, worlds[world_idx].txt_color)
+  print("s x"..remaining_pokes, grid_start_x + 104, 1, worlds[world_idx].txt_color)
 
   draw_obs()
   draw_fire()
@@ -2764,4 +2787,3 @@ __music__
 00 3336201c
 00 3036201c
 02 3437211d
-
