@@ -1570,7 +1570,7 @@ local function draw_fire()
   if fire_visible then
     local sprite
 
-    if fire_fail_animation_frame > 0 and fire_fail_animation_frame <= #fire_animation_sprites then
+    if fire_fail_animation_frame > 0 and fire_fail_animation_frame <= #fire_fail_animation_sprites then
       sprite = fire_fail_animation_sprites[fire_fail_animation_frame]
     else
       fire_animation_timer = fire_animation_timer + 1
@@ -2226,7 +2226,7 @@ function _update()
 
           fire_fail_animation_frame = fire_fail_animation_frame + 1
 
-          if fire_fail_animation_frame > #fire_animation_sprites then
+          if fire_fail_animation_frame > #fire_fail_animation_sprites then
             fire_visible = false
           end
 
