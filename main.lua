@@ -1276,6 +1276,28 @@ local function handle_turn()
     original_positions[i] = {x = poke.x, y = poke.y}
   end
 
+  -- Prevent two pokes from moving onto the same cell.
+  local destinations_per_poke = {}
+
+  for i, poke in pairs(pokes) do
+    local valid_intentions = calculate_valid_intentions(lvl, pokes, fire, poke, "poke", intentions_per_poke[i])
+    local can_move, intent = should_move(valid_intentions)
+
+    if can_move and intent then
+      destinations_per_poke[i] = {x = intent.x, y = intent.y}
+    end
+  end
+
+  for i, a in pairs(destinations_per_poke) do
+    for j, b in pairs(destinations_per_poke) do
+      if i ~= j and a.x == b.x and a.y == b.y then
+        set_flash("A PRICKLY POKE\nNEEDS CLEAR DIRECTIONS.")
+        make_pokes_blink({{poke = pokes[i]}, {poke = pokes[j]}})
+        return false, false
+      end
+    end
+  end
+
   local fire_intentions = calculate_fire_intentions(lvl, pokes, fire, fire_dir, crossing_nudges)
 
   -- Phase 2: Sequential processing with retries
@@ -1288,7 +1310,6 @@ local function handle_turn()
 
     for i, poke in pairs(pokes) do
       if not already_moved[i] then
-        -- Check validity against current state
         local valid_intentions = calculate_valid_intentions(lvl, pokes, fire, poke, "poke", intentions_per_poke[i])
 
         local can_move, intent = should_move(valid_intentions)
