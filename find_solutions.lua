@@ -116,13 +116,13 @@ end
   chunk = chunk .. extract_simple_function("is_valid_move") .. "\n"
   chunk = chunk .. extract_simple_function("should_move") .. "\n"
   chunk = chunk .. extract_simple_function("collect_poke_redirections") .. "\n"
-  chunk = chunk .. extract_simple_function("calculate_poke_intentions") .. "\n"
-  chunk = chunk .. extract_simple_function("calculate_fire_intentions") .. "\n"
-  chunk = chunk .. extract_simple_function("calculate_valid_intentions") .. "\n"
+  chunk = chunk .. extract_simple_function("calc_poke_intents") .. "\n"
+  chunk = chunk .. extract_simple_function("calc_fire_intents") .. "\n"
+  chunk = chunk .. extract_simple_function("calc_valid_intents") .. "\n"
   chunk = chunk .. extract_simple_function("detect_crossings") .. "\n"
   chunk = chunk .. extract_complex_function("parse_lvls") .. "\n"
 
-  chunk = chunk .. "return get_next_position, is_valid_move, should_move, collect_poke_redirections, calculate_poke_intentions, calculate_fire_intentions, calculate_valid_intentions, detect_crossings, parse_lvls"
+  chunk = chunk .. "return get_next_position, is_valid_move, should_move, collect_poke_redirections, calc_poke_intents, calc_fire_intents, calc_valid_intents, detect_crossings, parse_lvls"
 
   local loader, err = load(chunk, "main.lua functions")
   if not loader then
@@ -138,7 +138,7 @@ end
 end
 
 print("Loading game logic from main.lua...")
-local get_next_position, is_valid_move, should_move, collect_poke_redirections, calculate_poke_intentions, calculate_fire_intentions, calculate_valid_intentions, detect_crossings, parse_lvls = load_functions_from_main()
+local get_next_position, is_valid_move, should_move, collect_poke_redirections, calc_poke_intents, calc_fire_intents, calc_valid_intents, detect_crossings, parse_lvls = load_functions_from_main()
 
 -- Helper to add items to table
 local function add(t, v)
@@ -172,11 +172,11 @@ local function simulate_lvl(lvl, initial_pokes, max_steps)
     local original_positions = {fire = {x = fire.x, y = fire.y}}
 
     for i, poke in pairs(pokes) do
-      intentions_per_poke[i] = calculate_poke_intentions(pokes, i, crossing_nudges)
+      intentions_per_poke[i] = calc_poke_intents(pokes, i, crossing_nudges)
       original_positions[i] = {x = poke.x, y = poke.y}
     end
 
-    local fire_intentions = calculate_fire_intentions(lvl, pokes, fire, fire_dir, crossing_nudges)
+    local fire_intentions = calc_fire_intents(lvl, pokes, fire, fire_dir, crossing_nudges)
 
     local already_moved = {fire = false}
     for i in pairs(pokes) do already_moved[i] = false end
@@ -187,7 +187,7 @@ local function simulate_lvl(lvl, initial_pokes, max_steps)
 
       for i, poke in pairs(pokes) do
         if not already_moved[i] then
-          local valid_intentions = calculate_valid_intentions(lvl, pokes, fire, poke, "poke", intentions_per_poke[i])
+          local valid_intentions = calc_valid_intents(lvl, pokes, fire, poke, "poke", intentions_per_poke[i])
           local can_move, intent = should_move(valid_intentions)
 
           if can_move and intent then
@@ -204,7 +204,7 @@ local function simulate_lvl(lvl, initial_pokes, max_steps)
       end
 
       if not moved and not already_moved.fire then
-        local valid_intentions = calculate_valid_intentions(lvl, pokes, fire, fire, "fire", fire_intentions)
+        local valid_intentions = calc_valid_intents(lvl, pokes, fire, fire, "fire", fire_intentions)
         local can_move, intent = should_move(valid_intentions)
 
         if can_move and intent then
