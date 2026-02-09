@@ -703,7 +703,7 @@ local breakout_sequence = parse_lvls([[{
     pokes={{x=5,y=6,rot=1},{x=6,y=5,rot=1},{x=7,y=6,rot=1},{x=6,y=7,rot=1}},
     max=2,
     solution={{x=5,y=5,rot=2},{x=5,y=3,rot=1}},
-    intro="Their door was open to everybody even if they had no intention of buying anything.\n\nAnd most of the time, they wouldn't."
+    intro="Their door remains open to everybody even if they have no intention of buying anything."
   },
   {
     id=39,
@@ -722,7 +722,7 @@ local breakout_sequence = parse_lvls([[{
     pokes={{x=4,y=7,rot=2},{x=5,y=6,rot=4},{x=6,y=5,rot=3},{x=6,y=7,rot=3},{x=7,y=6,rot=4},{x=10,y=5,rot=4}},
     max=3,
     solution={{x=1, y=1, rot=2},{x=2, y=7, rot=1},{x=7, y=5, rot=4}},
-    intro="The ice cream cart got off the pavement and got a storefront."
+    intro="The ice cream cart gets off the pavement and gets a storefront."
   },
   {
     id=31,
@@ -741,7 +741,7 @@ local breakout_sequence = parse_lvls([[{
     pokes={{x=1,y=6,rot=2},{x=2,y=3,rot=3},{x=6,y=3,rot=2},{x=6,y=11,rot=1},{x=7,y=4,rot=4},{x=9,y=2,rot=1},{x=9,y=7,rot=1}},
     max=2,
     solution={{x=6,y=10,rot=1},{x=7,y=2,rot=2}},
-    intro="The liquor store was always there but it grew a little bigger every few years."
+    intro="Someone pins the schedule of the sewing circle on the postmaster's notice board."
   },
   {
     id=32,
@@ -769,7 +769,7 @@ local breakout_sequence = parse_lvls([[{
     pokes={{x=5,y=8,rot=2},{x=6,y=7,rot=3},{x=7,y=6,rot=2},{x=7,y=8,rot=2},{x=8,y=5,rot=2},{x=10,y=4,rot=3},{x=11,y=10,rot=1}},
     max=4,
     solution={{x=6,y=10,rot=1},{x=6,y=11,rot=1},{x=7,y=7,rot=4},{x=9,y=5,rot=4}},
-    outro="The campfire.\nThe crossroads.\nThe main street.\n\nWhere neighbors go to hide and where they go to be seen."
+    outro="The campfire.\nThe crossroads.\nThe main street.\n\nWhere neighbors go to catch the light."
   }
 }]])
 

@@ -14,7 +14,7 @@ Place a poke in the right spot to push the flame towards the lamp.
 
 Navigate with arrow keys.
 X to place and rotate pokes.
-Z to start turn.
+Z to start the turn.
 
 A poke next to the flame will give it a push.
 
@@ -121,19 +121,17 @@ Where the mud takes over and lets go like a breath.
 
 The dry goods store opened back when it was just called "the road".
 
-Their door was open to everybody even if they had no intention of buying anything.
+Their door remains open to everybody even if they have no intention of buying anything.
 
-And most of the time, they wouldn't.
+The ice cream cart gets off the pavement and gets a storefront.
 
-The ice cream cart got off the pavement and got a storefront.
-
-The liquor store was always there but it grew a little bigger every few years.
+Someone pins the schedule of the sewing circle on the postmaster's notice board.
 
 The campfire.
 The crossroads.
 The main street.
 
-Where neighbors go to hide and where they go to be seen.
+Where neighbors go to catch the light.
 
 
 # CANNONBALL COURT
