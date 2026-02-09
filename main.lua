@@ -1544,14 +1544,14 @@ local function handle_inputs()
   end
 
   if (btnp(4)) then
-    -- Save pre-roll state
     pre_turn_pokes = {}
+
     for i,a in pairs(pokes) do
-      -- Only save user pokes
       if not a.read_only then
         pre_turn_pokes[#pre_turn_pokes+1] = {x=a.x, y=a.y, rot=a.rot}
       end
     end
+
     turn_time = true
     turn_timer = 0
   end
