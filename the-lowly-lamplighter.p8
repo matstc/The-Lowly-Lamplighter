@@ -63,11 +63,11 @@ local flash = nil
 local flash_frames = 0
 local help_text_colors = {5,6,7}
 local help_text_color_step = 1
-local help_text_color_steps_per_frame = 10
-local crossing_nudges = {}
+local help_text_color_steps = 10
+local nudges = {}
 local blinking_pokes = {}
 local blinking_step = 1
-local blinking_steps_per_frame = 8
+local blinking_steps = 8
 local delete_save_data_button_label = "delete save data"
 local toggle_music_button_label = "disable music"
 local z_press_count = 0
@@ -706,7 +706,7 @@ local breakout_sequence = parse_lvls([[{
     pokes={{x=5,y=6,rot=1},{x=6,y=5,rot=1},{x=7,y=6,rot=1},{x=6,y=7,rot=1}},
     max=2,
     solution={{x=5,y=5,rot=2},{x=5,y=3,rot=1}},
-    intro="their door was open to everybody even if they had no intention of buying anything.\n\nand most of the time, they wouldn't."
+    intro="their door remains open to everybody even if they have no intention of buying anything."
   },
   {
     id=39,
@@ -725,7 +725,7 @@ local breakout_sequence = parse_lvls([[{
     pokes={{x=4,y=7,rot=2},{x=5,y=6,rot=4},{x=6,y=5,rot=3},{x=6,y=7,rot=3},{x=7,y=6,rot=4},{x=10,y=5,rot=4}},
     max=3,
     solution={{x=1, y=1, rot=2},{x=2, y=7, rot=1},{x=7, y=5, rot=4}},
-    intro="the ice cream cart got off the pavement and got a storefront."
+    intro="the ice cream cart gets off the pavement and gets a storefront."
   },
   {
     id=31,
@@ -744,7 +744,7 @@ local breakout_sequence = parse_lvls([[{
     pokes={{x=1,y=6,rot=2},{x=2,y=3,rot=3},{x=6,y=3,rot=2},{x=6,y=11,rot=1},{x=7,y=4,rot=4},{x=9,y=2,rot=1},{x=9,y=7,rot=1}},
     max=2,
     solution={{x=6,y=10,rot=1},{x=7,y=2,rot=2}},
-    intro="the liquor store was always there but it grew a little bigger every few years."
+    intro="someone pins the schedule of the sewing circle on the postmaster's notice board."
   },
   {
     id=32,
@@ -772,7 +772,7 @@ local breakout_sequence = parse_lvls([[{
     pokes={{x=5,y=8,rot=2},{x=6,y=7,rot=3},{x=7,y=6,rot=2},{x=7,y=8,rot=2},{x=8,y=5,rot=2},{x=10,y=4,rot=3},{x=11,y=10,rot=1}},
     max=4,
     solution={{x=6,y=10,rot=1},{x=6,y=11,rot=1},{x=7,y=7,rot=4},{x=9,y=5,rot=4}},
-    outro="the campfire.\nthe crossroads.\nthe main street.\n\nwhere neighbors go to hide and where they go to be seen."
+    outro="the campfire.\nthe crossroads.\nthe main street.\n\nwhere neighbors go to catch the light."
   }
 }]])
 
@@ -1037,111 +1037,111 @@ local function get_next_position(x, y, dir)
 end
 
 local function collect_poke_redirections(pokes, entity_x, entity_y, skip_idx)
-  local intentions = {}
+  local intents = {}
   for i, poke in pairs(pokes) do
     if i ~= skip_idx then
       if poke.x == entity_x - 1 and poke.y == entity_y and poke.rot == 2 then
         local tx, ty = get_next_position(entity_x, entity_y, 2)
-        add(intentions, {dir = 2, x = tx, y = ty, redirected = true, poke = poke})
+        add(intents, {dir = 2, x = tx, y = ty, redirected = true, poke = poke})
       elseif poke.x == entity_x + 1 and poke.y == entity_y and poke.rot == 4 then
         local tx, ty = get_next_position(entity_x, entity_y, 4)
-        add(intentions, {dir = 4, x = tx, y = ty, redirected = true, poke = poke})
+        add(intents, {dir = 4, x = tx, y = ty, redirected = true, poke = poke})
       elseif poke.x == entity_x and poke.y == entity_y - 1 and poke.rot == 3 then
         local tx, ty = get_next_position(entity_x, entity_y, 3)
-        add(intentions, {dir = 3, x = tx, y = ty, redirected = true, poke = poke})
+        add(intents, {dir = 3, x = tx, y = ty, redirected = true, poke = poke})
       elseif poke.x == entity_x and poke.y == entity_y + 1 and poke.rot == 1 then
         local tx, ty = get_next_position(entity_x, entity_y, 1)
-        add(intentions, {dir = 1, x = tx, y = ty, redirected = true, poke = poke})
+        add(intents, {dir = 1, x = tx, y = ty, redirected = true, poke = poke})
       end
     end
   end
-  return intentions
+  return intents
 end
 
-local function calculate_poke_intentions(pokes, poke_idx, crossing_nudges)
+local function calc_poke_intents(pokes, poke_idx, nudges)
   local poke = pokes[poke_idx]
-  local intentions = {}
+  local intents = {}
 
   -- check if this poke has a crossing nudge from previous turn
-  if crossing_nudges[poke_idx] then
-    local nudge_dir = crossing_nudges[poke_idx]
+  if nudges[poke_idx] then
+    local nudge_dir = nudges[poke_idx]
     local tx, ty = get_next_position(poke.x, poke.y, nudge_dir)
-    add(intentions, {dir = nudge_dir, x = tx, y = ty, redirected = true, is_nudge = true})
+    add(intents, {dir = nudge_dir, x = tx, y = ty, redirected = true, is_nudge = true})
   end
 
   local redirections = collect_poke_redirections(pokes, poke.x, poke.y, poke_idx)
   for _, redir in ipairs(redirections) do
-    add(intentions, redir)
+    add(intents, redir)
   end
 
   if poke.dir then
     local tx, ty = get_next_position(poke.x, poke.y, poke.dir)
-    add(intentions, {dir = poke.dir, x = tx, y = ty, redirected = false})
+    add(intents, {dir = poke.dir, x = tx, y = ty, redirected = false})
   end
 
-  return intentions
+  return intents
 end
 
-local function calculate_fire_intentions(lvl, pokes, fire, fire_dir, crossing_nudges)
+local function calc_fire_intents(lvl, pokes, fire, fire_dir, nudges)
   local goal_reached = (fire.x == lvl.goal[1] and fire.y == lvl.goal[2])
   if goal_reached then return {{x = fire.x, y = fire.y, dir = nil, redirected = false}} end
 
-  local intentions = {}
+  local intents = {}
 
   -- check if fire has a crossing nudge from previous turn
-  if crossing_nudges.fire then
-    local nudge_dir = crossing_nudges.fire
+  if nudges.fire then
+    local nudge_dir = nudges.fire
     local tx, ty = get_next_position(fire.x, fire.y, nudge_dir)
-    add(intentions, {x = tx, y = ty, dir = nudge_dir, redirected = true, is_nudge = true})
+    add(intents, {x = tx, y = ty, dir = nudge_dir, redirected = true, is_nudge = true})
   end
 
   local redirections = collect_poke_redirections(pokes, fire.x, fire.y, nil)
   for _, redir in ipairs(redirections) do
-    add(intentions, redir)
+    add(intents, redir)
   end
 
   if fire_dir then
     local tx, ty = get_next_position(fire.x, fire.y, fire_dir)
-    add(intentions, {x = tx, y = ty, dir = fire_dir, redirected = false})
+    add(intents, {x = tx, y = ty, dir = fire_dir, redirected = false})
   end
 
-  return intentions
+  return intents
 end
 
-local function calculate_valid_intentions(lvl, pokes, fire, entity, entity_type, intentions)
-  local valid_intentions = {}
-  for _, intent in ipairs(intentions) do
+local function calc_valid_intents(lvl, pokes, fire, entity, entity_type, intents)
+  local valid_intents = {}
+  for _, intent in ipairs(intents) do
     if (intent.x ~= entity.x or intent.y ~= entity.y)
       and is_valid_move(lvl, pokes, fire, entity_type, intent.x, intent.y) then
-      add(valid_intentions, intent)
+      add(valid_intents, intent)
     end
   end
-  return valid_intentions
+  return valid_intents
 end
 
-local function should_move(valid_intentions)
+local function should_move(valid_intents)
   -- if there's a nudge from a crossing, it takes priority
-  for _, intent in ipairs(valid_intentions) do
+  for _, intent in ipairs(valid_intents) do
     if intent.is_nudge then
       return true, intent
     end
   end
 
-  if #valid_intentions == 1 then
-    return true, valid_intentions[1]
-  elseif #valid_intentions == 2 and valid_intentions[1].redirected == true and valid_intentions[2].redirected == false then
-    return true, valid_intentions[1]
+  if #valid_intents == 1 then
+    return true, valid_intents[1]
+  elseif #valid_intents == 2 and valid_intents[1].redirected == true and valid_intents[2].redirected == false then
+    return true, valid_intents[1]
   end
 
   return false, nil
 end
 
 local function date_entity_animation(e)
-  if e.move_frames > 0 then
+  if e.frames > 0 then
     e.draw_x = e.draw_x + e.move_dx
     e.draw_y = e.draw_y + e.move_dy
-    e.move_frames = e.move_frames - 1
-    if e.move_frames <= 0 then
+    e.frames = e.frames - 1
+    if e.frames <= 0 then
       e.draw_x = e.x
       e.draw_y = e.y
     end
@@ -1151,7 +1151,7 @@ end
 local function execute_move(e, intent)
   e.move_dx = (intent.x - e.x) / frames_in_step
   e.move_dy = (intent.y - e.y) / frames_in_step
-  e.move_frames = frames_in_step
+  e.frames = frames_in_step
   e.draw_x = e.x
   e.draw_y = e.y
   e.x = intent.x
@@ -1214,10 +1214,10 @@ local function detect_crossings(pokes, fire, original_positions, moved_entities)
   return next_nudges
 end
 
-local function make_pokes_blink(intentions)
-  for _, intention in ipairs(intentions) do
-    if intention.poke then
-      add(blinking_pokes, intention.poke)
+local function blink(intents)
+  for _, intent in ipairs(intents) do
+    if intent.poke then
+      add(blinking_pokes, intent.poke)
     end
   end
 end
@@ -1234,7 +1234,7 @@ local function handle_turn()
       draw_y = poke.draw_y,
       move_dx = poke.move_dx,
       move_dy = poke.move_dy,
-      move_frames = poke.move_frames
+      frames = poke.frames
     }
   end
   local snapshot_fire = {
@@ -1244,11 +1244,11 @@ local function handle_turn()
     draw_y = fire.draw_y,
     move_dx = fire.move_dx,
     move_dy = fire.move_dy,
-    move_frames = fire.move_frames
+    frames = fire.frames
   }
   local snapshot_fire_dir = fire_dir
 
-  local function rollback_turn()
+  local function rollback()
     for j, snap in pairs(snapshot_pokes) do
       pokes[j].x = snap.x
       pokes[j].y = snap.y
@@ -1258,7 +1258,7 @@ local function handle_turn()
       pokes[j].draw_y = snap.draw_y
       pokes[j].move_dx = snap.move_dx
       pokes[j].move_dy = snap.move_dy
-      pokes[j].move_frames = snap.move_frames
+      pokes[j].frames = snap.frames
     end
     fire.x = snapshot_fire.x
     fire.y = snapshot_fire.y
@@ -1266,20 +1266,42 @@ local function handle_turn()
     fire.draw_y = snapshot_fire.draw_y
     fire.move_dx = snapshot_fire.move_dx
     fire.move_dy = snapshot_fire.move_dy
-    fire.move_frames = snapshot_fire.move_frames
+    fire.frames = snapshot_fire.frames
     fire_dir = snapshot_fire_dir
   end
 
-  -- phase 1: calculate intentions based on original state
-  local intentions_per_poke = {}
+  -- phase 1: calculate intents based on original state
+  local intents_per_poke = {}
   local original_positions = {fire = {x = fire.x, y = fire.y}}
 
   for i, poke in pairs(pokes) do
-    intentions_per_poke[i] = calculate_poke_intentions(pokes, i, crossing_nudges)
+    intents_per_poke[i] = calc_poke_intents(pokes, i, nudges)
     original_positions[i] = {x = poke.x, y = poke.y}
   end
 
-  local fire_intentions = calculate_fire_intentions(lvl, pokes, fire, fire_dir, crossing_nudges)
+  -- prevent two pokes from moving onto the same cell.
+  local destinations_per_poke = {}
+
+  for i, poke in pairs(pokes) do
+    local valid_intents = calc_valid_intents(lvl, pokes, fire, poke, "poke", intents_per_poke[i])
+    local can_move, intent = should_move(valid_intents)
+
+    if can_move and intent then
+      destinations_per_poke[i] = {x = intent.x, y = intent.y}
+    end
+  end
+
+  for i, a in pairs(destinations_per_poke) do
+    for j, b in pairs(destinations_per_poke) do
+      if i ~= j and a.x == b.x and a.y == b.y then
+        set_flash("a prickly poke\nneeds clear directions.")
+        blink({{poke = pokes[i]}, {poke = pokes[j]}})
+        return false, false
+      end
+    end
+  end
+
+  local fire_intents = calc_fire_intents(lvl, pokes, fire, fire_dir, nudges)
 
   -- phase 2: sequential processing with retries
   local already_moved = {fire = false}
@@ -1291,10 +1313,9 @@ local function handle_turn()
 
     for i, poke in pairs(pokes) do
       if not already_moved[i] then
-        -- check validity against current state
-        local valid_intentions = calculate_valid_intentions(lvl, pokes, fire, poke, "poke", intentions_per_poke[i])
+        local valid_intents = calc_valid_intents(lvl, pokes, fire, poke, "poke", intents_per_poke[i])
 
-        local can_move, intent = should_move(valid_intentions)
+        local can_move, intent = should_move(valid_intents)
         if can_move and intent then
           execute_move(poke, intent)
           poke.dir = intent.dir
@@ -1303,10 +1324,10 @@ local function handle_turn()
           moved = true
           break
         else
-          if #valid_intentions > 1 then
-            rollback_turn()
+          if #valid_intents > 1 then
+            rollback()
             set_flash("a prickly poke\nneeds clear directions.")
-            make_pokes_blink(valid_intentions)
+            blink(valid_intents)
             return false, false
           end
         end
@@ -1314,9 +1335,9 @@ local function handle_turn()
     end
 
     if not moved and not already_moved.fire then
-      local valid_intentions = calculate_valid_intentions(lvl, pokes, fire, fire, "fire", fire_intentions)
+      local valid_intents = calc_valid_intents(lvl, pokes, fire, fire, "fire", fire_intents)
 
-      local can_move, intent = should_move(valid_intentions)
+      local can_move, intent = should_move(valid_intents)
       if can_move and intent then
         execute_move(fire, intent)
 
@@ -1326,10 +1347,10 @@ local function handle_turn()
         already_moved.fire = true
         moved = true
       else
-        if #valid_intentions > 1 then
-          rollback_turn()
+        if #valid_intents > 1 then
+          rollback()
           set_flash("a fickle flame\nneeds clear directions.")
-          make_pokes_blink(valid_intentions)
+          blink(valid_intents)
           return false, false
         end
       end
@@ -1351,7 +1372,7 @@ local function handle_turn()
     fire_dir = nil
   end
 
-  crossing_nudges = detect_crossings(pokes, fire, original_positions, already_moved)
+  nudges = detect_crossings(pokes, fire, original_positions, already_moved)
 
   local any_poke_moved = false
   for i, _ in pairs(pokes) do
@@ -1365,7 +1386,7 @@ local function make_poke(a, read_only)
   return {
     x = a.x, y = a.y,
     draw_x = a.x, draw_y = a.y,
-    move_dx = 0, move_dy = 0, move_frames = 0,
+    move_dx = 0, move_dy = 0, frames = 0,
     rot = a.rot, read_only = read_only
   }
 end
@@ -1383,7 +1404,7 @@ local function reset_lvl(next_lvl)
   fire_fail_animation_frame = 0
   fire_visible = true
   cursor_step = 1
-  crossing_nudges = {}
+  nudges = {}
   if not flash then help_text_color_step = 1 end
 
   if next_lvl then
@@ -1417,7 +1438,7 @@ local function reset_lvl(next_lvl)
     draw_y = lvl.fire[2],
     move_dx = 0,
     move_dy = 0,
-    move_frames = 0
+    frames = 0
   }
   pokes = {}
   cursor_x = flr((grid_size + 1) / 2)
@@ -1526,14 +1547,14 @@ local function handle_inputs()
   end
 
   if (btnp(4)) then
-    -- save pre-roll state
     pre_turn_pokes = {}
+
     for i,a in pairs(pokes) do
-      -- only save user pokes
       if not a.read_only then
         pre_turn_pokes[#pre_turn_pokes+1] = {x=a.x, y=a.y, rot=a.rot}
       end
     end
+
     turn_time = true
     turn_timer = 0
   end
@@ -1550,27 +1571,27 @@ end
 
 local function draw_fire()
   if fire_visible then
-    local fire_sprite
+    local sprite
 
-    if fire_fail_animation_frame > 0 and fire_fail_animation_frame <= #fire_animation_sprites then
-      fire_sprite = fire_fail_animation_sprites[fire_fail_animation_frame]
+    if fire_fail_animation_frame > 0 and fire_fail_animation_frame <= #fire_fail_animation_sprites then
+      sprite = fire_fail_animation_sprites[fire_fail_animation_frame]
     else
       fire_animation_timer = fire_animation_timer + 1
       if fire_animation_timer >= frames_in_step * #fire_animation_sprites then
         fire_animation_timer = 0
       end
       local fire_sprite_index = flr((fire_animation_timer / frames_in_step) % #fire_animation_sprites) + 1
-      fire_sprite = fire_animation_sprites[fire_sprite_index]
+      sprite = fire_animation_sprites[fire_sprite_index]
     end
 
-    spr(fire_sprite, grid_start_x + (fire.draw_x-1) * grid_x, grid_start_y + (fire.draw_y-1) * grid_y)
+    spr(sprite, grid_start_x + (fire.draw_x-1) * grid_x, grid_start_y + (fire.draw_y-1) * grid_y)
   end
 end
 
 local function draw_pokes()
   if #blinking_pokes > 0 then
     blinking_step = blinking_step + 1
-    if blinking_step > (blinking_steps_per_frame * 12) then
+    if blinking_step > (blinking_steps * 12) then
       blinking_step = 1
       blinking_pokes = {}
     end
@@ -1591,7 +1612,7 @@ local function draw_pokes()
     end
 
 
-    if not contains(blinking_pokes, poke) or flr(blinking_step / blinking_steps_per_frame) % 2 == 0 then
+    if not contains(blinking_pokes, poke) or flr(blinking_step / blinking_steps) % 2 == 0 then
       spr(sprite, grid_start_x + (poke.draw_x-1) * grid_x, grid_start_y + (poke.draw_y-1) * grid_y)
     end
   end
@@ -1674,7 +1695,6 @@ local function draw_text(text, start_x, start_y, max_width, text_color, outline)
       end
       add(words, spaces)
     elseif char == "\n" then
-      -- handle newline character
       if #current_word > 0 then
         add(words, current_word)
         current_word = ""
@@ -1750,8 +1770,8 @@ local function draw_help_text(message)
     end
 
     local osd_y = 121 - (newline_count * 8)
-    draw_text(message, grid_start_x - 1, osd_y, 115, help_text_colors[flr(help_text_color_step / help_text_color_steps_per_frame + 1)], true)
-    if help_text_color_step < (help_text_color_steps_per_frame * (#help_text_colors - 1)) then
+    draw_text(message, grid_start_x - 1, osd_y, 115, help_text_colors[flr(help_text_color_step / help_text_color_steps + 1)], true)
+    if help_text_color_step < (help_text_color_steps * (#help_text_colors - 1)) then
       help_text_color_step = help_text_color_step + 1
     end
   end
@@ -2182,13 +2202,13 @@ function _update()
       if (not fire_moved and not poke_moved) or goal_reached or step_counter > (lvl.max_steps or max_steps) then
         lvl_timer = lvl_timer + 1
 
-        if goal_reached and fire.move_frames < frames_in_step then
+        if goal_reached and fire.frames < frames_in_step then
           if not success_sound_played then
             sfx(success_sfx)
             success_sound_played = true
           end
 
-          if goal_lit == false and fire.move_frames == 0 then
+          if goal_lit == false and fire.frames == 0 then
             goal_lit = true
             burst_active = true
             burst_radius = 0
@@ -2209,7 +2229,7 @@ function _update()
 
           fire_fail_animation_frame = fire_fail_animation_frame + 1
 
-          if fire_fail_animation_frame > #fire_animation_sprites then
+          if fire_fail_animation_frame > #fire_fail_animation_sprites then
             fire_visible = false
           end
 
