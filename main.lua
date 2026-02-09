@@ -1079,15 +1079,15 @@ local function calc_poke_intents(pokes, poke_idx, nudges)
   return intents
 end
 
-local function calc_fire_intents(lvl, pokes, fire, fire_dir, crossing_nudges)
+local function calc_fire_intents(lvl, pokes, fire, fire_dir, nudges)
   local goal_reached = (fire.x == lvl.goal[1] and fire.y == lvl.goal[2])
   if goal_reached then return {{x = fire.x, y = fire.y, dir = nil, redirected = false}} end
 
   local intents = {}
 
   -- Check if fire has a crossing nudge from previous turn
-  if crossing_nudges.fire then
-    local nudge_dir = crossing_nudges.fire
+  if nudges.fire then
+    local nudge_dir = nudges.fire
     local tx, ty = get_next_position(fire.x, fire.y, nudge_dir)
     add(intents, {x = tx, y = ty, dir = nudge_dir, redirected = true, is_nudge = true})
   end
