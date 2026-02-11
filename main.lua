@@ -560,14 +560,14 @@ local clearing_sequence = parse_lvls([[{
     goal={10,6},
     obs={{2,5},{8,5},{10,3},{10,8}},
     pokes={{x=8,y=6,rot=2},{x=9,y=6,rot=1}},
-    max=5,
-    solution={{x=1,y=6,rot=2},{x=9,y=7,rot=1},{x=7,y=7,rot=2},{x=7,y=8,rot=1},{x=6,y=8,rot=2}}
-    },
-    {
-      id=57,
-      fire={10,10},
-      goal={8,7},
-      obs={{1,7},{3,4},{8,11},{11,7}},
+    max=4,
+    solution={{x=1,y=6,rot=2},{x=3,y=10,rot=2},{x=4,y=5,rot=3},{x=9,y=5,rot=3}}
+  },
+  {
+    id=57,
+    fire={10,10},
+    goal={8,7},
+    obs={{1,7},{3,4},{8,11},{11,7}},
     pokes={{x=2,y=11,rot=1},{x=3,y=2,rot=4},{x=5,y=9,rot=1},{x=6,y=4,rot=4},{x=7,y=6,rot=2},{x=8,y=3,rot=3},{x=9,y=8,rot=2},{x=10,y=1,rot=3},{x=9,y=9,rot=2}},
     max=2,
     max_steps=50,
