@@ -299,9 +299,8 @@ local function get_candidate_cells(lvl)
         valid = false
       end
 
-      -- Skip obstacles
-      if lvl.obstacles then
-        for _, obs in ipairs(lvl.obstacles) do
+      if lvl.obs then
+        for _, obs in pairs(lvl.obs) do
           if obs[1] == x and obs[2] == y then
             valid = false
             break

@@ -531,7 +531,7 @@ local clearing_sequence = parse_lvls([[{
     obs={{6,4},{6,11}},
     pokes={{x=5,y=6,rot=3},{x=6,y=5,rot=2},{x=6,y=7,rot=1},{x=7,y=6,rot=4},{x=10,y=11,rot=1}},
     max=2,
-    solution={{x=5,y=7,rot=2},{x=11,y=6,rot=4}}
+    solution={{x=5,y=7,rot=2},{x=11,y=4,rot=3}}
   },
   {
     id=59,
