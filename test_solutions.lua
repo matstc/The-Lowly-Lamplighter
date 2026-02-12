@@ -153,18 +153,18 @@ end
 ]]
 
   -- Extract and add the duplicate functions
-  chunk = chunk .. extract_simple_function("get_next_position") .. "\n"
+  chunk = chunk .. extract_simple_function("next_position") .. "\n"
   chunk = chunk .. extract_simple_function("should_move") .. "\n"
   chunk = chunk .. extract_simple_function("is_valid_move") .. "\n"
-  chunk = chunk .. extract_simple_function("collect_poke_redirections") .. "\n"
+  chunk = chunk .. extract_simple_function("poke_redirects") .. "\n"
   chunk = chunk .. extract_simple_function("calc_poke_intents") .. "\n"
   chunk = chunk .. extract_simple_function("calc_fire_intents") .. "\n"
   chunk = chunk .. extract_simple_function("calc_valid_intents") .. "\n"
-  chunk = chunk .. extract_simple_function("detect_crossings") .. "\n"
+  chunk = chunk .. extract_simple_function("detect_nudges") .. "\n"
   chunk = chunk .. extract_complex_function("parse_lvls") .. "\n"
 
   -- Return the functions
-  chunk = chunk .. "return get_next_position, should_move, is_valid_move, collect_poke_redirections, calc_poke_intents, calc_fire_intents, calc_valid_intents, detect_crossings, parse_lvls"
+  chunk = chunk .. "return next_position, should_move, is_valid_move, poke_redirects, calc_poke_intents, calc_fire_intents, calc_valid_intents, detect_nudges, parse_lvls"
 
   -- Load and execute the chunk
   local loader, err = load(chunk, "main.lua functions")
@@ -175,7 +175,7 @@ end
   return loader()
 end
 
-local get_next_position, should_move, is_valid_move, collect_poke_redirections, calc_poke_intents, calc_fire_intents, calc_valid_intents, detect_crossings, parse_lvls = load_functions_from_main()
+local next_position, should_move, is_valid_move, poke_redirects, calc_poke_intents, calc_fire_intents, calc_valid_intents, detect_nudges, parse_lvls = load_functions_from_main()
 
 -- parse_lvls loaded from main.lua
 
@@ -214,9 +214,8 @@ local function load_lvls()
 end
 
 -- Game logic functions loaded from main.lua
--- get_next_position, should_move, is_valid_move, collect_poke_redirections,
--- calc_poke_intents, calc_fire_intents, calc_valid_intents,
--- detect_crossings
+-- next_position, should_move, is_valid_move, poke_redirects,
+-- calc_poke_intents, calc_fire_intents, calc_valid_intents, detect_nudges
 
 local function simulate_turn(lvl, pokes, fire, fire_dir, crossing_nudges)
   local intentions_per_poke = {}
@@ -315,7 +314,7 @@ local function simulate_turn(lvl, pokes, fire, fire_dir, crossing_nudges)
     fire_dir = nil
   end
 
-  crossing_nudges = detect_crossings(pokes, fire, original_positions, already_moved)
+  crossing_nudges = detect_nudges(pokes, fire, original_positions, already_moved)
 
   local any_poke_moved = false
   for i, poke in pairs(pokes) do

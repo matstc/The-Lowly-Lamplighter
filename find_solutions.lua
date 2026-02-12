@@ -112,17 +112,17 @@ local function tonum(s)
 end
 ]]
 
-  chunk = chunk .. extract_simple_function("get_next_position") .. "\n"
+  chunk = chunk .. extract_simple_function("next_position") .. "\n"
   chunk = chunk .. extract_simple_function("is_valid_move") .. "\n"
   chunk = chunk .. extract_simple_function("should_move") .. "\n"
-  chunk = chunk .. extract_simple_function("collect_poke_redirections") .. "\n"
+  chunk = chunk .. extract_simple_function("poke_redirects") .. "\n"
   chunk = chunk .. extract_simple_function("calc_poke_intents") .. "\n"
   chunk = chunk .. extract_simple_function("calc_fire_intents") .. "\n"
   chunk = chunk .. extract_simple_function("calc_valid_intents") .. "\n"
-  chunk = chunk .. extract_simple_function("detect_crossings") .. "\n"
+  chunk = chunk .. extract_simple_function("detect_nudges") .. "\n"
   chunk = chunk .. extract_complex_function("parse_lvls") .. "\n"
 
-  chunk = chunk .. "return get_next_position, is_valid_move, should_move, collect_poke_redirections, calc_poke_intents, calc_fire_intents, calc_valid_intents, detect_crossings, parse_lvls"
+  chunk = chunk .. "return next_position, is_valid_move, should_move, poke_redirects, calc_poke_intents, calc_fire_intents, calc_valid_intents, detect_nudges, parse_lvls"
 
   local loader, err = load(chunk, "main.lua functions")
   if not loader then
@@ -138,7 +138,7 @@ end
 end
 
 print("Loading game logic from main.lua...")
-local get_next_position, is_valid_move, should_move, collect_poke_redirections, calc_poke_intents, calc_fire_intents, calc_valid_intents, detect_crossings, parse_lvls = load_functions_from_main()
+local next_position, is_valid_move, should_move, poke_redirects, calc_poke_intents, calc_fire_intents, calc_valid_intents, detect_nudges, parse_lvls = load_functions_from_main()
 
 -- Helper to add items to table
 local function add(t, v)
@@ -249,7 +249,7 @@ local function simulate_lvl(lvl, initial_pokes, max_steps)
     end
 
     -- Update crossing nudges
-    crossing_nudges = detect_crossings(pokes, fire, original_positions, already_moved)
+    crossing_nudges = detect_nudges(pokes, fire, original_positions, already_moved)
 
     -- Check if anything moved
     local something_moved = already_moved.fire

@@ -1,7 +1,5 @@
 -- The Lowly Lamplighter
 -- by MXTXC
-PICO8_WIDTH = 128
-PICO8_HEIGHT = 128
 grid_x = 11
 grid_y = 11
 grid_size = 11
@@ -1024,7 +1022,7 @@ local function is_valid_move(lvl, pokes, fire, entity_type, x, y)
   return true
 end
 
-local function get_next_position(x, y, dir)
+local function next_position(x, y, dir)
   if dir == 2 then return x + 1, y
   elseif dir == 4 then return x - 1, y
   elseif dir == 3 then return x, y + 1
@@ -1033,21 +1031,21 @@ local function get_next_position(x, y, dir)
   return x, y
 end
 
-local function collect_poke_redirections(pokes, entity_x, entity_y, skip_idx)
+local function poke_redirects(pokes, entity_x, entity_y, skip_idx)
   local intents = {}
   for i, poke in pairs(pokes) do
     if i ~= skip_idx then
       if poke.x == entity_x - 1 and poke.y == entity_y and poke.rot == 2 then
-        local tx, ty = get_next_position(entity_x, entity_y, 2)
+        local tx, ty = next_position(entity_x, entity_y, 2)
         add(intents, {dir = 2, x = tx, y = ty, redirected = true, poke = poke})
       elseif poke.x == entity_x + 1 and poke.y == entity_y and poke.rot == 4 then
-        local tx, ty = get_next_position(entity_x, entity_y, 4)
+        local tx, ty = next_position(entity_x, entity_y, 4)
         add(intents, {dir = 4, x = tx, y = ty, redirected = true, poke = poke})
       elseif poke.x == entity_x and poke.y == entity_y - 1 and poke.rot == 3 then
-        local tx, ty = get_next_position(entity_x, entity_y, 3)
+        local tx, ty = next_position(entity_x, entity_y, 3)
         add(intents, {dir = 3, x = tx, y = ty, redirected = true, poke = poke})
       elseif poke.x == entity_x and poke.y == entity_y + 1 and poke.rot == 1 then
-        local tx, ty = get_next_position(entity_x, entity_y, 1)
+        local tx, ty = next_position(entity_x, entity_y, 1)
         add(intents, {dir = 1, x = tx, y = ty, redirected = true, poke = poke})
       end
     end
@@ -1059,20 +1057,22 @@ local function calc_poke_intents(pokes, poke_idx, nudges)
   local poke = pokes[poke_idx]
   local intents = {}
 
-  -- Check if this poke has a crossing nudge from previous turn
   if nudges[poke_idx] then
-    local nudge_dir = nudges[poke_idx]
-    local tx, ty = get_next_position(poke.x, poke.y, nudge_dir)
-    add(intents, {dir = nudge_dir, x = tx, y = ty, redirected = true, is_nudge = true})
+    for _, nudger in ipairs(nudges[poke_idx]) do
+      if nudger.rot then
+        local tx, ty = next_position(poke.x, poke.y, nudger.rot)
+        add(intents, {dir = nudger.rot, x = tx, y = ty, redirected = true, is_nudge = true, poke = poke})
+      end
+    end
   end
 
-  local redirections = collect_poke_redirections(pokes, poke.x, poke.y, poke_idx)
-  for _, redir in ipairs(redirections) do
+  local redirects = poke_redirects(pokes, poke.x, poke.y, poke_idx)
+  for _, redir in ipairs(redirects) do
     add(intents, redir)
   end
 
   if poke.dir then
-    local tx, ty = get_next_position(poke.x, poke.y, poke.dir)
+    local tx, ty = next_position(poke.x, poke.y, poke.dir)
     add(intents, {dir = poke.dir, x = tx, y = ty, redirected = false})
   end
 
@@ -1085,20 +1085,22 @@ local function calc_fire_intents(lvl, pokes, fire, fire_dir, nudges)
 
   local intents = {}
 
-  -- Check if fire has a crossing nudge from previous turn
   if nudges.fire then
-    local nudge_dir = nudges.fire
-    local tx, ty = get_next_position(fire.x, fire.y, nudge_dir)
-    add(intents, {x = tx, y = ty, dir = nudge_dir, redirected = true, is_nudge = true})
+    for _, nudger in ipairs(nudges.fire) do
+      if nudger.rot then
+        local tx, ty = next_position(fire.x, fire.y, nudger.rot)
+        add(intents, {x = tx, y = ty, dir = nudger.rot, redirected = true, is_nudge = true, poke = nudger})
+      end
+    end
   end
 
-  local redirections = collect_poke_redirections(pokes, fire.x, fire.y, nil)
-  for _, redir in ipairs(redirections) do
+  local redirects = poke_redirects(pokes, fire.x, fire.y, nil)
+  for _, redir in ipairs(redirects) do
     add(intents, redir)
   end
 
   if fire_dir then
-    local tx, ty = get_next_position(fire.x, fire.y, fire_dir)
+    local tx, ty = next_position(fire.x, fire.y, fire_dir)
     add(intents, {x = tx, y = ty, dir = fire_dir, redirected = false})
   end
 
@@ -1119,11 +1121,18 @@ local function calc_valid_intents(lvl, pokes, fire, entity, entity_type, intents
 end
 
 local function should_move(valid_intents)
-  -- If there's a nudge from a crossing, it takes priority
+  local nudge = nil
   for _, intent in ipairs(valid_intents) do
     if intent.is_nudge then
-      return true, intent
+      if nudge then
+        return false, nil
+      end
+      nudge = intent
     end
+  end
+
+  if nudge then
+    return true, nudge
   end
 
   if #valid_intents == 1 then
@@ -1135,7 +1144,7 @@ local function should_move(valid_intents)
   return false, nil
 end
 
-local function date_entity_animation(e)
+local function animate_entity(e)
   if e.frames > 0 then
     e.draw_x = e.draw_x + e.move_dx
     e.draw_y = e.draw_y + e.move_dy
@@ -1147,7 +1156,7 @@ local function date_entity_animation(e)
   end
 end
 
-local function execute_move(e, intent)
+local function exec_move(e, intent)
   e.move_dx = (intent.x - e.x) / frames_in_step
   e.move_dy = (intent.y - e.y) / frames_in_step
   e.frames = frames_in_step
@@ -1166,51 +1175,61 @@ local function set_flash(message)
   help_text_color_step = 1
 end
 
-local function detect_crossings(pokes, fire, original_positions, moved_entities)
-  local next_nudges = {}
-  local entities = {}
+local function detect_nudges(pokes, fire, original_positions, moved_entities)
+  local nudges = {}
+  local objs = {}
 
   if moved_entities.fire then
-    add(entities, {id = "fire", old_x = original_positions.fire.x, old_y = original_positions.fire.y,
+    add(objs, {id = "fire", old_x = original_positions.fire.x, old_y = original_positions.fire.y,
                    new_x = fire.x, new_y = fire.y})
   end
   for i, poke in pairs(pokes) do
     if moved_entities[i] then
-      add(entities, {id = i, old_x = original_positions[i].x, old_y = original_positions[i].y,
+      add(objs, {id = i, old_x = original_positions[i].x, old_y = original_positions[i].y,
                      new_x = poke.x, new_y = poke.y, rot = poke.rot})
     end
   end
 
-  for i = 1, #entities do
-    for j = i + 1, #entities do
-      local e1, e2 = entities[i], entities[j]
+  for i = 1, #objs do
+    for j = i + 1, #objs do
+      local e1, e2 = objs[i], objs[j]
 
       local dx1, dy1 = e1.new_x - e1.old_x, e1.new_y - e1.old_y
       local dx2, dy2 = e2.new_x - e2.old_x, e2.new_y - e2.old_y
 
-      -- Horizontal crossing: both moving horizontally on adjacent rows
       if dy1 == 0 and dy2 == 0 and (e1.old_y == e2.old_y - 1 or e1.old_y == e2.old_y + 1) then
         if e1.new_x == e2.old_x and e2.new_x == e1.old_x then
-          local e1_points_toward_e2 = e1.rot and ((e2.new_y > e1.new_y and e1.rot == 3) or (e2.new_y < e1.new_y and e1.rot == 1))
-          local e2_points_toward_e1 = e2.rot and ((e1.new_y > e2.new_y and e2.rot == 3) or (e1.new_y < e2.new_y and e2.rot == 1))
-          if e1_points_toward_e2 then next_nudges[e2.id] = e1.rot end
-          if e2_points_toward_e1 then next_nudges[e1.id] = e2.rot end
+          local e1_toward_e2 = e1.rot and ((e2.new_y > e1.new_y and e1.rot == 3) or (e2.new_y < e1.new_y and e1.rot == 1))
+          local e2_toward_e1 = e2.rot and ((e1.new_y > e2.new_y and e2.rot == 3) or (e1.new_y < e2.new_y and e2.rot == 1))
+          if e1_toward_e2 then
+            if not nudges[e2.id] then nudges[e2.id] = {} end
+            add(nudges[e2.id], (e1.id == "fire") and fire or pokes[e1.id])
+          end
+          if e2_toward_e1 then
+            if not nudges[e1.id] then nudges[e1.id] = {} end
+            add(nudges[e1.id], (e2.id == "fire") and fire or pokes[e2.id])
+          end
         end
       end
 
-      -- Vertical crossing: both moving vertically on adjacent columns
       if dx1 == 0 and dx2 == 0 and (e1.old_x == e2.old_x - 1 or e1.old_x == e2.old_x + 1) then
         if e1.new_y == e2.old_y and e2.new_y == e1.old_y then
-          local e1_points_toward_e2 = e1.rot and ((e2.new_x > e1.new_x and e1.rot == 2) or (e2.new_x < e1.new_x and e1.rot == 4))
-          local e2_points_toward_e1 = e2.rot and ((e1.new_x > e2.new_x and e2.rot == 2) or (e1.new_x < e2.new_x and e2.rot == 4))
-          if e1_points_toward_e2 then next_nudges[e2.id] = e1.rot end
-          if e2_points_toward_e1 then next_nudges[e1.id] = e2.rot end
+          local e1_toward_e2 = e1.rot and ((e2.new_x > e1.new_x and e1.rot == 2) or (e2.new_x < e1.new_x and e1.rot == 4))
+          local e2_toward_e1 = e2.rot and ((e1.new_x > e2.new_x and e2.rot == 2) or (e1.new_x < e2.new_x and e2.rot == 4))
+          if e1_toward_e2 then
+            if not nudges[e2.id] then nudges[e2.id] = {} end
+            add(nudges[e2.id], (e1.id == "fire") and fire or pokes[e1.id])
+          end
+          if e2_toward_e1 then
+            if not nudges[e1.id] then nudges[e1.id] = {} end
+            add(nudges[e1.id], (e2.id == "fire") and fire or pokes[e2.id])
+          end
         end
       end
     end
   end
 
-  return next_nudges
+  return nudges
 end
 
 local function blink(intents)
@@ -1221,10 +1240,10 @@ local function blink(intents)
   end
 end
 
-local function handle_turn()
-  local snapshot_pokes = {}
+local function turn()
+  local pokes_bak = {}
   for i, poke in pairs(pokes) do
-    snapshot_pokes[i] = {
+    pokes_bak[i] = {
       x = poke.x,
       y = poke.y,
       dir = poke.dir,
@@ -1236,7 +1255,7 @@ local function handle_turn()
       frames = poke.frames
     }
   end
-  local snapshot_fire = {
+  local fire_bak = {
     x = fire.x,
     y = fire.y,
     draw_x = fire.draw_x,
@@ -1245,28 +1264,28 @@ local function handle_turn()
     move_dy = fire.move_dy,
     frames = fire.frames
   }
-  local snapshot_fire_dir = fire_dir
+  local fire_bak_dir = fire_dir
 
   local function rollback()
-    for j, snap in pairs(snapshot_pokes) do
-      pokes[j].x = snap.x
-      pokes[j].y = snap.y
-      pokes[j].dir = snap.dir
-      pokes[j].moving = snap.moving
-      pokes[j].draw_x = snap.draw_x
-      pokes[j].draw_y = snap.draw_y
-      pokes[j].move_dx = snap.move_dx
-      pokes[j].move_dy = snap.move_dy
-      pokes[j].frames = snap.frames
+    for j, b in pairs(pokes_bak) do
+      pokes[j].x = b.x
+      pokes[j].y = b.y
+      pokes[j].dir = b.dir
+      pokes[j].moving = b.moving
+      pokes[j].draw_x = b.draw_x
+      pokes[j].draw_y = b.draw_y
+      pokes[j].move_dx = b.move_dx
+      pokes[j].move_dy = b.move_dy
+      pokes[j].frames = b.frames
     end
-    fire.x = snapshot_fire.x
-    fire.y = snapshot_fire.y
-    fire.draw_x = snapshot_fire.draw_x
-    fire.draw_y = snapshot_fire.draw_y
-    fire.move_dx = snapshot_fire.move_dx
-    fire.move_dy = snapshot_fire.move_dy
-    fire.frames = snapshot_fire.frames
-    fire_dir = snapshot_fire_dir
+    fire.x = fire_bak.x
+    fire.y = fire_bak.y
+    fire.draw_x = fire_bak.draw_x
+    fire.draw_y = fire_bak.draw_y
+    fire.move_dx = fire_bak.move_dx
+    fire.move_dy = fire_bak.move_dy
+    fire.frames = fire_bak.frames
+    fire_dir = fire_bak_dir
   end
 
   -- Phase 1: Calculate intents based on original state
@@ -1318,7 +1337,7 @@ local function handle_turn()
 
         local can_move, intent = should_move(valid_intents)
         if can_move and intent then
-          execute_move(poke, intent)
+          exec_move(poke, intent)
           poke.dir = intent.dir
           poke.moving = not not intent.dir
           already_moved[i] = true
@@ -1345,7 +1364,7 @@ local function handle_turn()
 
       local can_move, intent = should_move(valid_intents)
       if can_move and intent then
-        execute_move(fire, intent)
+        exec_move(fire, intent)
 
         if intent.dir then
           fire_dir = intent.dir
@@ -1378,7 +1397,7 @@ local function handle_turn()
     fire_dir = nil
   end
 
-  nudges = detect_crossings(pokes, fire, original_positions, already_moved)
+  nudges = detect_nudges(pokes, fire, original_positions, already_moved)
 
   local any_poke_moved = false
   for i, _ in pairs(pokes) do
@@ -1939,8 +1958,8 @@ local function spawn_raindrops()
   local spawn_chance = world_index <= #worlds and worlds[world_index].rain_density or 0.1
   if rnd(1) < spawn_chance then
       local drop = {
-          x = flr(rnd(PICO8_WIDTH)),
-          y = flr(rnd(PICO8_HEIGHT))
+          x = flr(rnd(128)),
+          y = flr(rnd(128))
       }
       add(raindrops, drop)
   end
@@ -2186,10 +2205,10 @@ function _update()
     turn_timer = turn_timer + 1
 
     for _, poke in pairs(pokes) do
-      date_entity_animation(poke)
+      animate_entity(poke)
     end
 
-    date_entity_animation(fire)
+    animate_entity(fire)
 
     if turn_timer >= frames_in_step then
       turn_timer = 0
@@ -2199,7 +2218,7 @@ function _update()
       local poke_moved = false
 
       if not goal_reached and lvl_timer == 0 then
-        fire_moved, poke_moved = handle_turn()
+        fire_moved, poke_moved = turn()
         if fire_moved or poke_moved then
           sfx(step_sfx)
         end
@@ -2337,7 +2356,7 @@ function _draw()
 
   print("LEVEL "..world_index.."-"..lvl_index, grid_start_x - 1, 1, worlds[world_index].txt_color)
   if coordinates_enabled then
-    print(cursor_x..","..cursor_y, PICO8_WIDTH/2 - 5, 1, worlds[world_index].txt_color)
+    print(cursor_x..","..cursor_y, 128/2 - 5, 1, worlds[world_index].txt_color)
   end
   print("POKE", grid_start_x + 88, 1, worlds[world_index].txt_color)
   print("S x"..remaining_pokes, grid_start_x + 104, 1, worlds[world_index].txt_color)
