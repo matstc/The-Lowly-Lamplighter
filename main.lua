@@ -1623,8 +1623,8 @@ function draw_fire()
       if fire_animation_timer >= frames_in_step * #fire_animation_sprites then
         fire_animation_timer = 0
       end
-      local fire_sprite_index = flr((fire_animation_timer / frames_in_step) % #fire_animation_sprites) + 1
-      sprite = fire_animation_sprites[fire_sprite_index]
+      local fire_sprite_idx = flr((fire_animation_timer / frames_in_step) % #fire_animation_sprites) + 1
+      sprite = fire_animation_sprites[fire_sprite_idx]
     end
 
     spr(sprite, grid_start_x + (fire.draw_x-1) * grid_x, grid_start_y + (fire.draw_y-1) * grid_y)
