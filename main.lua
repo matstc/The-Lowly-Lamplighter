@@ -14,7 +14,7 @@ raindrops = {}
 rain_speed = 1
 rain_move_interval = 4
 rain_frame_counter = 0
-world_index = 1
+world_idx = 1
 world_picker_sel = "world"
 settings_sel = 1
 particles_enabled = true
@@ -27,7 +27,7 @@ turn_time = false
 turn_timer = 0
 fire_dir = nil
 lvl_timer = 0
-lvl_index = 1
+lvl_idx = 1
 success_sound_played = false
 fail_sound_played = false
 goal_lit = false
@@ -1453,8 +1453,8 @@ function reset_lvl(next_lvl)
 
   if next_lvl then
     pre_turn_pokes = nil
-    lvl_index = lvl_index + 1
-    if lvl_index > #lvls then
+    lvl_idx = lvl_idx + 1
+    if lvl_idx > #lvls then
       set_completed_from_lvl_data()
 
       if all_worlds_completed then
@@ -1466,14 +1466,14 @@ function reset_lvl(next_lvl)
       return
     end
 
-    if lvls[lvl_index].intro then
-      current_text = lvls[lvl_index].intro
+    if lvls[lvl_idx].intro then
+      current_text = lvls[lvl_idx].intro
       game_state = "lvl_intro"
       return
     end
   end
 
-  lvl = lvls[lvl_index] or lvls[1]
+  lvl = lvls[lvl_idx] or lvls[1]
   fire = {
     x = lvl.fire[1],
     y = lvl.fire[2],
@@ -1517,8 +1517,8 @@ function check_cheat_codes()
 
   if btnp(2, 1) then
     sfx(menu_action_sfx)
-    if lvl_index > 1 then
-      lvl_index = lvl_index - 1
+    if lvl_idx > 1 then
+      lvl_idx = lvl_idx - 1
       reset_lvl(false)
     else
       game_state = "world_picker"
@@ -1604,7 +1604,7 @@ function handle_inputs()
 end
 
 function draw_obs()
-  local obs_sprite = worlds[world_index].obs_sprite
+  local obs_sprite = worlds[world_idx].obs_sprite
   if lvl and lvl.obs then
     for _, obs in pairs(lvl.obs) do
       spr(obs_sprite, grid_start_x + grid_x*(obs[1]-1), grid_start_y + grid_y*(obs[2]-1))
@@ -1678,10 +1678,10 @@ end
 
 function draw_word(word, start_x, start_y, color, outline)
   if outline then
-    draw_word(word, start_x - 1, start_y, worlds[world_index].bg_color, false)
-    draw_word(word, start_x + 1, start_y, worlds[world_index].bg_color, false)
-    draw_word(word, start_x, start_y - 1, worlds[world_index].bg_color, false)
-    draw_word(word, start_x, start_y + 1, worlds[world_index].bg_color, false)
+    draw_word(word, start_x - 1, start_y, worlds[world_idx].bg_color, false)
+    draw_word(word, start_x + 1, start_y, worlds[world_idx].bg_color, false)
+    draw_word(word, start_x, start_y - 1, worlds[world_idx].bg_color, false)
+    draw_word(word, start_x, start_y + 1, worlds[world_idx].bg_color, false)
   end
 
   local current_x = start_x
@@ -1908,7 +1908,7 @@ function draw_world_picker()
         completed_lvls = completed_lvls + 1
       end
     end
-    draw_button(world.name, completed_lvls.."/"..#world.lvls, x, y, rect_width, rect_height, world_index == i, is_world_completed(world) and 15 or 3)
+    draw_button(world.name, completed_lvls.."/"..#world.lvls, x, y, rect_width, rect_height, world_idx == i, is_world_completed(world) and 15 or 3)
   end
 
   local controls_y = start_y + #worlds * spacing + 12
@@ -1973,7 +1973,7 @@ end
 function spawn_raindrops()
   if not particles_enabled then return end
 
-  local spawn_chance = world_index <= #worlds and worlds[world_index].rain_density or 0.1
+  local spawn_chance = world_idx <= #worlds and worlds[world_idx].rain_density or 0.1
   if rnd(1) < spawn_chance then
       local drop = {
           x = flr(rnd(128)),
@@ -1984,7 +1984,7 @@ function spawn_raindrops()
 end
 
 function draw_rain(rain_color)
-  local color = rain_color or world_index <= #worlds and worlds[world_index].rain_color or worlds[1].rain_color
+  local color = rain_color or world_idx <= #worlds and worlds[world_idx].rain_color or worlds[1].rain_color
 
   if color > 15 and game_state == "game" then
     pal(color - 128, color, 1)
@@ -2045,21 +2045,21 @@ function _update()
   rain_frame_counter = rain_frame_counter + 1
 
   if rain_frame_counter >= rain_move_interval then
-    local x_multiplier = 1
-    local y_multiplier = 1
-    local rain_dir = world_index <= #worlds and worlds[world_index].rain_dir or worlds[1].rain_dir
+    local x_mult = 1
+    local y_mult = 1
+    local rain_dir = world_idx <= #worlds and worlds[world_idx].rain_dir or worlds[1].rain_dir
 
     if rain_dir == "left" then
-      x_multiplier = -1
-      y_multiplier = 1
+      x_mult = -1
+      y_mult = 1
     elseif rain_dir == "right" then
-      x_multiplier = 1
-      y_multiplier = 1
+      x_mult = 1
+      y_mult = 1
     end
 
     for drop in all(raindrops) do
-      drop.x = drop.x + rain_speed * x_multiplier
-      drop.y = drop.y + rain_speed * y_multiplier
+      drop.x = drop.x + rain_speed * x_mult
+      drop.y = drop.y + rain_speed * y_mult
 
       if rnd(1) < 0.02 then
         del(raindrops, drop)
@@ -2082,11 +2082,11 @@ function _update()
   if game_state == "world_picker" then
     if btnp(2) then
       if world_picker_sel == "world" then
-        world_index = world_index - 1
-        if world_index < 1 then world_index = #worlds end
+        world_idx = world_idx - 1
+        if world_idx < 1 then world_idx = #worlds end
       elseif world_picker_sel == "controls" then
         world_picker_sel = "world"
-        world_index = #worlds
+        world_idx = #worlds
       elseif world_picker_sel == "settings" then
         world_picker_sel = "controls"
       end
@@ -2095,15 +2095,15 @@ function _update()
 
     if btnp(3) then
       if world_picker_sel == "world" then
-        world_index = world_index + 1
-        if world_index > #worlds then
+        world_idx = world_idx + 1
+        if world_idx > #worlds then
           world_picker_sel = "controls"
         end
       elseif world_picker_sel == "controls" then
         world_picker_sel = "settings"
       elseif world_picker_sel == "settings" then
         world_picker_sel = "world"
-        world_index = 1
+        world_idx = 1
       end
       sfx(nav_sfx)
     end
@@ -2116,12 +2116,12 @@ function _update()
       elseif world_picker_sel == "controls" then
         game_state = "controls_screen"
       else
-        lvls = worlds[world_index].lvls
-        lvl_index = 1
+        lvls = worlds[world_idx].lvls
+        lvl_idx = 1
 
         -- Check if first lvl has intro text
-        if lvls[lvl_index].intro then
-          current_text = lvls[lvl_index].intro
+        if lvls[lvl_idx].intro then
+          current_text = lvls[lvl_idx].intro
           game_state = "lvl_intro"
         else
           game_state = "game"
@@ -2319,7 +2319,7 @@ function _draw()
   end
 
   if game_state == "world_picker" then
-    local bg = worlds[world_index] and worlds[world_index].bg_color or 129
+    local bg = worlds[world_idx] and worlds[world_idx].bg_color or 129
     if bg > 15 then
       pal(bg - 128, bg, 1)
     end
@@ -2347,7 +2347,7 @@ function _draw()
   end
 
   if game_state == "lvl_intro" or game_state == "lvl_outro" then
-    local bg = worlds[world_index].bg_color
+    local bg = worlds[world_idx].bg_color
     if bg > 15 then
       pal(bg - 128, bg, 1)
     end
@@ -2358,7 +2358,7 @@ function _draw()
   end
 
   -- In-game
-  local bg = worlds[world_index].bg_color
+  local bg = worlds[world_idx].bg_color
   if bg > 15 then
     pal(bg - 128, bg, 1)
   end
@@ -2372,12 +2372,12 @@ function _draw()
     end
   end
 
-  print("LEVEL "..world_index.."-"..lvl_index, grid_start_x - 1, 1, worlds[world_index].txt_color)
+  print("LEVEL "..world_idx.."-"..lvl_idx, grid_start_x - 1, 1, worlds[world_idx].txt_color)
   if coordinates_enabled then
-    print(cursor_x..","..cursor_y, 128/2 - 5, 1, worlds[world_index].txt_color)
+    print(cursor_x..","..cursor_y, 128/2 - 5, 1, worlds[world_idx].txt_color)
   end
-  print("POKE", grid_start_x + 88, 1, worlds[world_index].txt_color)
-  print("S x"..remaining_pokes, grid_start_x + 104, 1, worlds[world_index].txt_color)
+  print("POKE", grid_start_x + 88, 1, worlds[world_idx].txt_color)
+  print("S x"..remaining_pokes, grid_start_x + 104, 1, worlds[world_idx].txt_color)
 
   draw_obs()
   draw_fire()
