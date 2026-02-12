@@ -29,7 +29,7 @@ fire_dir = nil
 lvl_timer = 0
 lvl_index = 1
 success_sound_played = false
-failure_sound_played = false
+fail_sound_played = false
 goal_lit = false
 frames_in_step = 12
 step_counter = 0
@@ -96,7 +96,7 @@ large_alphabet = {
  ["z"]={0xff,0xff,0x03,0x06,0x0c,0x18,0x30,0x60,0xc0,0x80,0x00,0x00,0x00,0x00,0xff,0xff}
 }
 
-local function parse_lvls(str)
+function parse_lvls(str)
   local pos = 1
   local len = #str
 
@@ -261,7 +261,7 @@ local function parse_lvls(str)
   return parse_table()
 end
 
-local tutorial_sequence = parse_lvls([[{
+local tutorial_seq = parse_lvls([[{
   {
     id=1,
     goal={8,2},
@@ -477,7 +477,7 @@ local tutorial_sequence = parse_lvls([[{
   }
 }]])
 
-local clearing_sequence = parse_lvls([[{
+local clearing_seq = parse_lvls([[{
   {
     id=14,
     fire={2,6},
@@ -575,7 +575,7 @@ local clearing_sequence = parse_lvls([[{
   }
 }]])
 
-local reuse_sequence = parse_lvls([[{
+local reuse_seq = parse_lvls([[{
   {
     id=53,
     fire={3,5},
@@ -626,12 +626,12 @@ local reuse_sequence = parse_lvls([[{
   },
   {
     id=54,
-    fire={2,6},
-    goal={5,9},
-    obs={{3,6},{4,5},{5,4},{7,3},{7,7}},
-    pokes={{x=1,y=3,rot=2},{x=2,y=7,rot=1},{x=3,y=2,rot=3},{x=6,y=3,rot=3},{x=6,y=5,rot=1},{x=7,y=6,rot=4},{x=10,y=5,rot=3},{x=11,y=9,rot=4}},
+    fire={2,7},
+    goal={5,10},
+    obs={{3,7},{4,6},{5,5},{7,4},{7,8}},
+    pokes={{x=1,y=4,rot=2},{x=2,y=8,rot=1},{x=3,y=3,rot=3},{x=6,y=4,rot=3},{x=6,y=6,rot=1},{x=7,y=7,rot=4},{x=10,y=6,rot=3},{x=11,y=10,rot=4}},
     max=2,
-    solution={{x=2,y=2,rot=2},{x=11,y=10,rot=1}},
+    solution={{x=2,y=3,rot=2},{x=11,y=11,rot=1}},
     intro="Two lovers find their way here to this hollow on the first snow of the year."
   },
   {
@@ -674,7 +674,7 @@ local reuse_sequence = parse_lvls([[{
   }
 }]])
 
-local breakout_sequence = parse_lvls([[{
+local breakout_seq = parse_lvls([[{
   {
     id=30,
     fire={6,7},
@@ -771,7 +771,7 @@ local breakout_sequence = parse_lvls([[{
   }
 }]])
 
-local cannon_sequence = parse_lvls([[{
+local cannon_seq = parse_lvls([[{
   {
     id=43,
     fire={3,3},
@@ -873,7 +873,7 @@ local cannon_sequence = parse_lvls([[{
 local worlds = {
   {
     name = "Tutorial Town",
-    lvls = tutorial_sequence,
+    lvls = tutorial_seq,
     rain_density = 0.04,
     rain_dir = "right",
     rain_color = 13,
@@ -883,7 +883,7 @@ local worlds = {
   },
   {
     name = "Winnow Park",
-    lvls = clearing_sequence,
+    lvls = clearing_seq,
     rain_density = 0.08,
     rain_dir = "left",
     rain_color = 4,
@@ -893,7 +893,7 @@ local worlds = {
   },
   {
     name = "Silver Hollow",
-    lvls = reuse_sequence,
+    lvls = reuse_seq,
     rain_density = 0.04,
     rain_dir = "right",
     rain_color = 6,
@@ -903,7 +903,7 @@ local worlds = {
   },
   {
     name = "Main Street",
-    lvls = breakout_sequence,
+    lvls = breakout_seq,
     rain_density = 0.04,
     rain_dir = "left",
     rain_color = 0,
@@ -913,7 +913,7 @@ local worlds = {
   },
   {
     name = "Cannonball Court",
-    lvls = cannon_sequence,
+    lvls = cannon_seq,
     rain_density = 0.03,
     rain_dir = "right",
     rain_color = 15,
@@ -923,7 +923,7 @@ local worlds = {
   }
 }
 
-local function is_world_completed(world)
+function is_world_completed(world)
   local completed = true
   for _, lvl in ipairs(world.lvls) do
     if not lvl.completed then
@@ -935,7 +935,7 @@ local function is_world_completed(world)
   return completed
 end
 
-local function set_completed_from_lvl_data()
+function set_completed_from_lvl_data()
   local completed = true
 
   for _, world in pairs(worlds) do
@@ -949,34 +949,31 @@ local function set_completed_from_lvl_data()
     end
   end
 
-
   all_worlds_completed = completed
 end
 
-local function contains(tab, val)
+function contains(tab, val)
   for v in all(tab) do
     if v == val then return true end
   end
   return false
 end
 
-local function draw_big(char, x, y, col)
+function draw_big(char, x, y, col)
   local glyph = large_alphabet[char]
   if not glyph then return end
 
   for row=1,16 do
     local line_data = glyph[row]
     for col_idx=0,7 do
-      if (line_data & (0x80 >>> col_idx)) ~= 0 then
+      if (line_data & (0x80 >> col_idx)) ~= 0 then
         pset(x + col_idx, y + (row - 1), col)
       end
     end
   end
 end
 
-local function print_big(str, x, y, color)
-  local start_x = x
-
+function print_big(str, x, y, color)
   for i=1, #str do
     local char = sub(str, i, i)
 
@@ -989,7 +986,7 @@ local function print_big(str, x, y, color)
   end
 end
 
-local function is_valid_move(lvl, pokes, fire, entity_type, x, y)
+function is_valid_move(lvl, pokes, fire, entity_type, x, y)
   local grid_size = 11
   if x < 1 or x > grid_size or y < 1 or y > grid_size then
     return false
@@ -1022,7 +1019,7 @@ local function is_valid_move(lvl, pokes, fire, entity_type, x, y)
   return true
 end
 
-local function next_position(x, y, dir)
+function next_position(x, y, dir)
   if dir == 2 then return x + 1, y
   elseif dir == 4 then return x - 1, y
   elseif dir == 3 then return x, y + 1
@@ -1031,29 +1028,29 @@ local function next_position(x, y, dir)
   return x, y
 end
 
-local function poke_redirects(pokes, entity_x, entity_y, skip_idx)
+function poke_redirects(pokes, entity_x, entity_y, skip_idx)
   local intents = {}
   for i, poke in pairs(pokes) do
     if i ~= skip_idx then
       if poke.x == entity_x - 1 and poke.y == entity_y and poke.rot == 2 then
         local tx, ty = next_position(entity_x, entity_y, 2)
-        add(intents, {dir = 2, x = tx, y = ty, redirected = true, poke = poke})
+        add(intents, {dir = 2, x = tx, y = ty, redir = true, poke = poke})
       elseif poke.x == entity_x + 1 and poke.y == entity_y and poke.rot == 4 then
         local tx, ty = next_position(entity_x, entity_y, 4)
-        add(intents, {dir = 4, x = tx, y = ty, redirected = true, poke = poke})
+        add(intents, {dir = 4, x = tx, y = ty, redir = true, poke = poke})
       elseif poke.x == entity_x and poke.y == entity_y - 1 and poke.rot == 3 then
         local tx, ty = next_position(entity_x, entity_y, 3)
-        add(intents, {dir = 3, x = tx, y = ty, redirected = true, poke = poke})
+        add(intents, {dir = 3, x = tx, y = ty, redir = true, poke = poke})
       elseif poke.x == entity_x and poke.y == entity_y + 1 and poke.rot == 1 then
         local tx, ty = next_position(entity_x, entity_y, 1)
-        add(intents, {dir = 1, x = tx, y = ty, redirected = true, poke = poke})
+        add(intents, {dir = 1, x = tx, y = ty, redir = true, poke = poke})
       end
     end
   end
   return intents
 end
 
-local function calc_poke_intents(pokes, poke_idx, nudges)
+function calc_poke_intents(pokes, poke_idx, nudges)
   local poke = pokes[poke_idx]
   local intents = {}
 
@@ -1061,7 +1058,7 @@ local function calc_poke_intents(pokes, poke_idx, nudges)
     for _, nudger in ipairs(nudges[poke_idx]) do
       if nudger.rot then
         local tx, ty = next_position(poke.x, poke.y, nudger.rot)
-        add(intents, {dir = nudger.rot, x = tx, y = ty, redirected = true, is_nudge = true, poke = poke})
+        add(intents, {dir = nudger.rot, x = tx, y = ty, redir = true, is_nudge = true, poke = poke})
       end
     end
   end
@@ -1073,15 +1070,15 @@ local function calc_poke_intents(pokes, poke_idx, nudges)
 
   if poke.dir then
     local tx, ty = next_position(poke.x, poke.y, poke.dir)
-    add(intents, {dir = poke.dir, x = tx, y = ty, redirected = false})
+    add(intents, {dir = poke.dir, x = tx, y = ty, redir = false})
   end
 
   return intents
 end
 
-local function calc_fire_intents(lvl, pokes, fire, fire_dir, nudges)
+function calc_fire_intents(lvl, pokes, fire, fire_dir, nudges)
   local goal_reached = (fire.x == lvl.goal[1] and fire.y == lvl.goal[2])
-  if goal_reached then return {{x = fire.x, y = fire.y, dir = nil, redirected = false}} end
+  if goal_reached then return {{x = fire.x, y = fire.y, dir = nil, redir = false}} end
 
   local intents = {}
 
@@ -1089,7 +1086,7 @@ local function calc_fire_intents(lvl, pokes, fire, fire_dir, nudges)
     for _, nudger in ipairs(nudges.fire) do
       if nudger.rot then
         local tx, ty = next_position(fire.x, fire.y, nudger.rot)
-        add(intents, {x = tx, y = ty, dir = nudger.rot, redirected = true, is_nudge = true, poke = nudger})
+        add(intents, {x = tx, y = ty, dir = nudger.rot, redir = true, is_nudge = true, poke = nudger})
       end
     end
   end
@@ -1101,16 +1098,16 @@ local function calc_fire_intents(lvl, pokes, fire, fire_dir, nudges)
 
   if fire_dir then
     local tx, ty = next_position(fire.x, fire.y, fire_dir)
-    add(intents, {x = tx, y = ty, dir = fire_dir, redirected = false})
+    add(intents, {x = tx, y = ty, dir = fire_dir, redir = false})
   end
 
   return intents
 end
 
-local function calc_valid_intents(lvl, pokes, fire, entity, entity_type, intents, include_momentum)
+function calc_valid_intents(lvl, pokes, fire, entity, entity_type, intents, include_momentum)
   local valid_intents = {}
   for _, intent in ipairs(intents) do
-    if intent.redirected == true or include_momentum then
+    if intent.redir == true or include_momentum then
       if (intent.x ~= entity.x or intent.y ~= entity.y)
         and is_valid_move(lvl, pokes, fire, entity_type, intent.x, intent.y) then
         add(valid_intents, intent)
@@ -1120,7 +1117,19 @@ local function calc_valid_intents(lvl, pokes, fire, entity, entity_type, intents
   return valid_intents
 end
 
-local function should_move(valid_intents)
+function towards_flame(fire, poke, intents)
+  for _, intent in ipairs(intents) do
+    if intent.redir == true then
+      if (intent.x ~= poke.x or intent.y ~= poke.y)
+        and intent.x == fire.x and intent.y == fire.y then
+        return true
+      end
+    end
+  end
+  return false
+end
+
+function should_move(valid_intents)
   local nudge = nil
   for _, intent in ipairs(valid_intents) do
     if intent.is_nudge then
@@ -1137,14 +1146,14 @@ local function should_move(valid_intents)
 
   if #valid_intents == 1 then
     return true, valid_intents[1]
-  elseif #valid_intents == 2 and valid_intents[1].redirected == true and valid_intents[2].redirected == false then
+  elseif #valid_intents == 2 and valid_intents[1].redir == true and valid_intents[2].redir == false then
     return true, valid_intents[1]
   end
 
   return false, nil
 end
 
-local function animate_entity(e)
+function animate_entity(e)
   if e.frames > 0 then
     e.draw_x = e.draw_x + e.move_dx
     e.draw_y = e.draw_y + e.move_dy
@@ -1156,7 +1165,7 @@ local function animate_entity(e)
   end
 end
 
-local function exec_move(e, intent)
+function exec_move(e, intent)
   e.move_dx = (intent.x - e.x) / frames_in_step
   e.move_dy = (intent.y - e.y) / frames_in_step
   e.frames = frames_in_step
@@ -1166,7 +1175,7 @@ local function exec_move(e, intent)
   e.y = intent.y
 end
 
-local function set_flash(message)
+function set_flash(message)
   if flash then return end
   if message == lvl.osd then return end
 
@@ -1175,7 +1184,7 @@ local function set_flash(message)
   help_text_color_step = 1
 end
 
-local function detect_nudges(pokes, fire, original_positions, moved_entities)
+function detect_nudges(pokes, fire, original_positions, moved_entities)
   local nudges = {}
   local objs = {}
 
@@ -1232,7 +1241,7 @@ local function detect_nudges(pokes, fire, original_positions, moved_entities)
   return nudges
 end
 
-local function blink(intents)
+function blink(intents)
   for _, intent in ipairs(intents) do
     if intent.poke then
       add(blinking_pokes, intent.poke)
@@ -1240,7 +1249,7 @@ local function blink(intents)
   end
 end
 
-local function turn()
+function turn()
   local pokes_bak = {}
   for i, poke in pairs(pokes) do
     pokes_bak[i] = {
@@ -1288,7 +1297,18 @@ local function turn()
     fire_dir = fire_bak_dir
   end
 
-  -- Phase 1: Calculate intents based on original state
+  local function maybe_rollback(valid_intents, prefix)
+    if #valid_intents > 2 or (#valid_intents == 2 and valid_intents[1].redir == true and valid_intents[2].redir == true) then
+      rollback()
+      set_flash(prefix.."\nNEEDS CLEAR DIRECTIONS.")
+      blink(valid_intents)
+      return true
+    end
+
+    return false
+  end
+
+  -- Phase 1: Calc intents based on original state
   local intents_per_poke = {}
   local original_positions = {fire = {x = fire.x, y = fire.y}}
 
@@ -1297,7 +1317,7 @@ local function turn()
     original_positions[i] = {x = poke.x, y = poke.y}
   end
 
-  -- Prevent two pokes from moving onto the same cell.
+  -- Stop two pokes from moving onto same cell
   local destinations_per_poke = {}
 
   for i, poke in pairs(pokes) do
@@ -1321,41 +1341,39 @@ local function turn()
 
   local fire_intents = calc_fire_intents(lvl, pokes, fire, fire_dir, nudges)
 
-  -- Phase 2: Sequential processing with retries
+  -- Phase 2
   local already_moved = {fire = false}
   for i in pairs(pokes) do already_moved[i] = false end
 
   local moved = true
-  local momentum_included = false
+  local priority_pass = false
+  local momentum_pass = false
 
   while moved do
     moved = false
 
     for i, poke in pairs(pokes) do
       if not already_moved[i] then
-        local valid_intents = calc_valid_intents(lvl, pokes, fire, poke, "poke", intents_per_poke[i], momentum_included)
+        if not priority_pass or not towards_flame(fire, poke, intents_per_poke[i]) then
+          local valid_intents = calc_valid_intents(lvl, pokes, fire, poke, "poke", intents_per_poke[i], priority_pass or momentum_pass)
 
-        local can_move, intent = should_move(valid_intents)
-        if can_move and intent then
-          exec_move(poke, intent)
-          poke.dir = intent.dir
-          poke.moving = not not intent.dir
-          already_moved[i] = true
-          moved = true
-          break
-        else
-          if #valid_intents > 2 or (#valid_intents == 2 and valid_intents[1].redirected == true and valid_intents[2].redirected == true) then
-            rollback()
-            set_flash("A PRICKLY POKE\nNEEDS CLEAR DIRECTIONS.")
-            blink(valid_intents)
-            return false, false
+          local can_move, intent = should_move(valid_intents)
+          if can_move and intent then
+            exec_move(poke, intent)
+            poke.dir = intent.dir
+            poke.moving = not not intent.dir
+            already_moved[i] = true
+            moved = true
+            break
+          else
+            if maybe_rollback(valid_intents, "A PRICKLY POKE") then return false, false end
           end
         end
       end
     end
 
-    if not moved and not momentum_included then
-      momentum_included = true
+    if not moved and not priority_pass and not momentum_pass then
+      priority_pass = true
       moved = true
     end
 
@@ -1372,13 +1390,14 @@ local function turn()
         already_moved.fire = true
         moved = true
       else
-        if #valid_intents > 2 or (#valid_intents == 2 and valid_intents[1].redirected == true and valid_intents[2].redirected == true) then
-          rollback()
-          set_flash("A FICKLE FLAME\nNEEDS CLEAR DIRECTIONS.")
-          blink(valid_intents)
-          return false, false
-        end
+        if maybe_rollback(valid_intents, "A FICKLE FLAME") then return false, false end
       end
+    end
+
+    if not moved and not momentum_pass then
+      priority_pass = false
+      momentum_pass = true
+      moved = true
     end
   end
 
@@ -1407,22 +1426,22 @@ local function turn()
   return already_moved.fire, any_poke_moved
 end
 
-local function make_poke(a, read_only)
+function make_poke(a, ro)
   return {
     x = a.x, y = a.y,
     draw_x = a.x, draw_y = a.y,
     move_dx = 0, move_dy = 0, frames = 0,
-    rot = a.rot, read_only = read_only
+    rot = a.rot, ro = ro
   }
 end
 
-local function reset_lvl(next_lvl)
+function reset_lvl(next_lvl)
   lvl_timer = 0
   step_counter = 0
   turn_time = false
   fire_dir = nil
   success_sound_played = false
-  failure_sound_played = false
+  fail_sound_played = false
   goal_lit = false
   burst_active = false
   burst_radius = 0
@@ -1447,7 +1466,6 @@ local function reset_lvl(next_lvl)
       return
     end
 
-    -- Check if next lvl has intro text
     if lvls[lvl_index].intro then
       current_text = lvls[lvl_index].intro
       game_state = "lvl_intro"
@@ -1490,7 +1508,7 @@ local function reset_lvl(next_lvl)
   end
 end
 
-local function check_cheat_codes()
+function check_cheat_codes()
   if btnp(3, 1) then
     sfx(menu_action_sfx)
     reset_lvl(false)
@@ -1528,7 +1546,7 @@ local function check_cheat_codes()
   return false
 end
 
-local function handle_inputs()
+function handle_inputs()
   if (btnp(0)) then cursor_x = cursor_x - 1; sfx(nav_sfx) end
   if (btnp(1)) then cursor_x = cursor_x + 1; sfx(nav_sfx) end
   if (btnp(2)) then cursor_y = cursor_y - 1; sfx(nav_sfx) end
@@ -1538,7 +1556,7 @@ local function handle_inputs()
     for poke in all(pokes) do
       if poke.x == cursor_x and poke.y == cursor_y then
         exists = true
-        if poke.read_only then
+        if poke.ro then
           sfx(failure_sfx)
           break
         end
@@ -1575,7 +1593,7 @@ local function handle_inputs()
     pre_turn_pokes = {}
 
     for i,a in pairs(pokes) do
-      if not a.read_only then
+      if not a.ro then
         pre_turn_pokes[#pre_turn_pokes+1] = {x=a.x, y=a.y, rot=a.rot}
       end
     end
@@ -1585,7 +1603,7 @@ local function handle_inputs()
   end
 end
 
-local function draw_obs()
+function draw_obs()
   local obs_sprite = worlds[world_index].obs_sprite
   if lvl and lvl.obs then
     for _, obs in pairs(lvl.obs) do
@@ -1594,7 +1612,7 @@ local function draw_obs()
   end
 end
 
-local function draw_fire()
+function draw_fire()
   if fire_visible then
     local sprite
 
@@ -1613,7 +1631,7 @@ local function draw_fire()
   end
 end
 
-local function draw_pokes()
+function draw_pokes()
   if #blinking_pokes > 0 then
     blinking_step = blinking_step + 1
     if blinking_step > (blinking_steps * 12) then
@@ -1624,7 +1642,7 @@ local function draw_pokes()
 
   for poke in all(pokes) do
     local sprite = nil
-    if poke.read_only then
+    if poke.ro then
       if poke.rot == 1 then sprite = 32 end
       if poke.rot == 2 then sprite = 33 end
       if poke.rot == 3 then sprite = 34 end
@@ -1643,7 +1661,7 @@ local function draw_pokes()
   end
 end
 
-local function word_width(word)
+function word_width(word)
   local width = 0
   for j = 1, #word do
     local char = sub(word, j, j)
@@ -1658,7 +1676,7 @@ local function word_width(word)
   return width
 end
 
-local function draw_word(word, start_x, start_y, color, outline)
+function draw_word(word, start_x, start_y, color, outline)
   if outline then
     draw_word(word, start_x - 1, start_y, worlds[world_index].bg_color, false)
     draw_word(word, start_x + 1, start_y, worlds[world_index].bg_color, false)
@@ -1698,7 +1716,7 @@ local function draw_word(word, start_x, start_y, color, outline)
   return current_x
 end
 
-local function draw_text(text, start_x, start_y, max_width, text_color, outline)
+function draw_text(text, start_x, start_y, max_width, text_color, outline)
   local words = {}
   local current_word = ""
   local y = start_y
@@ -1784,7 +1802,7 @@ local function draw_text(text, start_x, start_y, max_width, text_color, outline)
   end
 end
 
-local function draw_help_text(message)
+function draw_help_text(message)
   if message then
     -- Count newlines to calculate starting y position
     local newline_count = 0
@@ -1802,7 +1820,7 @@ local function draw_help_text(message)
   end
 end
 
-local function draw_dithering_night()
+function draw_dithering_night()
   local y = 0
   for _, sprite in ipairs({45, 44, 42, 43, 38, 39, 40, 41}) do
     for x=0,15 do
@@ -1812,7 +1830,7 @@ local function draw_dithering_night()
   end
 end
 
-local function draw_title_screen()
+function draw_title_screen()
   draw_dithering_night()
 
   -- The gaslight needs to be drawn in two passes.
@@ -1851,7 +1869,7 @@ local function draw_title_screen()
   end
 end
 
-local function draw_button(text, side_text, x, y, width, height, is_selected, sprite_id, text_x_offset)
+function draw_button(text, side_text, x, y, width, height, is_selected, sprite_id, text_x_offset)
   if is_selected then
     rectfill(x, y, x + width, y + height, 4)
   end
@@ -1873,7 +1891,7 @@ local function draw_button(text, side_text, x, y, width, height, is_selected, sp
   end
 end
 
-local function draw_world_picker()
+function draw_world_picker()
   draw_text("CHOOSE A NEIGHBORHOOD", 23, 3, 110, 4)
 
   local x = 9
@@ -1902,7 +1920,7 @@ local function draw_world_picker()
   draw_text("X TO SELECT", 43, 120, 110, 5)
 end
 
-local function draw_settings_screen()
+function draw_settings_screen()
   draw_text("SETTINGS", 48, 3, 110, 4)
 
   local x = 10
@@ -1921,7 +1939,7 @@ local function draw_settings_screen()
   draw_text("X TO SELECT    Z TO GO BACK", 10, 120, 110, 5)
 end
 
-local function draw_controls_screen()
+function draw_controls_screen()
   draw_text("IN-GAME CONTROLS", 34, 3, 110, 4)
 
   local x = 13
@@ -1952,7 +1970,7 @@ local function draw_controls_screen()
   draw_text("Z TO GO BACK", 40, 120, 110, 5)
 end
 
-local function spawn_raindrops()
+function spawn_raindrops()
   if not particles_enabled then return end
 
   local spawn_chance = world_index <= #worlds and worlds[world_index].rain_density or 0.1
@@ -1965,7 +1983,7 @@ local function spawn_raindrops()
   end
 end
 
-local function draw_rain(rain_color)
+function draw_rain(rain_color)
   local color = rain_color or world_index <= #worlds and worlds[world_index].rain_color or worlds[1].rain_color
 
   if color > 15 and game_state == "game" then
@@ -1977,7 +1995,7 @@ local function draw_rain(rain_color)
   end
 end
 
-local function play_music(boolean)
+function play_music(boolean)
   music_enabled = boolean
   dset(61, music_enabled and 0 or 1)
 
@@ -2245,9 +2263,9 @@ function _update()
             set_flash("THE FICKLE FLAME DIED OUT...")
           end
 
-          if not failure_sound_played then
+          if not fail_sound_played then
             sfx(61)
-            failure_sound_played = true
+            fail_sound_played = true
             fire_fail_animation_frame = 0
             fire_dir = nil
           end

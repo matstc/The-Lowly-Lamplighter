@@ -56,7 +56,7 @@ local function load_functions_from_main()
   -- Simple extraction for functions without nested function definitions
   local function extract_simple_function(func_name)
     -- Match: "local function name(...) ... end" where there are no nested functions
-    local pattern = "(local function " .. func_name .. "%b().-\nend)\n"
+    local pattern = "(function " .. func_name .. "%b().-\nend)\n"
     local match = content:match(pattern)
     if match then
       return match
@@ -66,7 +66,7 @@ local function load_functions_from_main()
 
   -- Extract function with nested functions by finding matching end at same indentation
   local function extract_complex_function(func_name)
-    local start_pattern = "local function " .. func_name .. "("
+    local start_pattern = "function " .. func_name .. "("
     local start_pos = content:find(start_pattern, 1, true)
     if not start_pos then
       error("Could not find function: " .. func_name)
@@ -160,11 +160,12 @@ end
   chunk = chunk .. extract_simple_function("calc_poke_intents") .. "\n"
   chunk = chunk .. extract_simple_function("calc_fire_intents") .. "\n"
   chunk = chunk .. extract_simple_function("calc_valid_intents") .. "\n"
+  chunk = chunk .. extract_simple_function("towards_flame") .. "\n"
   chunk = chunk .. extract_simple_function("detect_nudges") .. "\n"
   chunk = chunk .. extract_complex_function("parse_lvls") .. "\n"
 
   -- Return the functions
-  chunk = chunk .. "return next_position, should_move, is_valid_move, poke_redirects, calc_poke_intents, calc_fire_intents, calc_valid_intents, detect_nudges, parse_lvls"
+  chunk = chunk .. "return next_position, should_move, is_valid_move, poke_redirects, calc_poke_intents, calc_fire_intents, calc_valid_intents, towards_flame, detect_nudges, parse_lvls"
 
   -- Load and execute the chunk
   local loader, err = load(chunk, "main.lua functions")
@@ -175,7 +176,7 @@ end
   return loader()
 end
 
-local next_position, should_move, is_valid_move, poke_redirects, calc_poke_intents, calc_fire_intents, calc_valid_intents, detect_nudges, parse_lvls = load_functions_from_main()
+local next_position, should_move, is_valid_move, poke_redirects, calc_poke_intents, calc_fire_intents, calc_valid_intents, towards_flame, detect_nudges, parse_lvls = load_functions_from_main()
 
 -- parse_lvls loaded from main.lua
 
@@ -191,13 +192,13 @@ local function load_lvls()
 
   local all_lvls = {}
 
-  -- Extract each lvl set
+  -- Extract each lvl set (main.lua uses _seq not _sequence)
   local lvl_sets = {
-    {name = "Tutorial Town", pattern = "tutorial_sequence = parse_lvls%(%[%[(.-)%]%]%)"},
-    {name = "Winnow Park", pattern = "clearing_sequence = parse_lvls%(%[%[(.-)%]%]%)"},
-    {name = "Silver Hollow", pattern = "reuse_sequence = parse_lvls%(%[%[(.-)%]%]%)"},
-    {name = "Cannonball Court", pattern = "cannon_sequence = parse_lvls%(%[%[(.-)%]%]%)"},
-    {name = "Main Street", pattern = "breakout_sequence = parse_lvls%(%[%[(.-)%]%]%)"},
+    {name = "Tutorial Town", pattern = "tutorial_seq = parse_lvls%(%[%[(.-)%]%]%)"},
+    {name = "Winnow Park", pattern = "clearing_seq = parse_lvls%(%[%[(.-)%]%]%)"},
+    {name = "Silver Hollow", pattern = "reuse_seq = parse_lvls%(%[%[(.-)%]%]%)"},
+    {name = "Cannonball Court", pattern = "cannon_seq = parse_lvls%(%[%[(.-)%]%]%)"},
+    {name = "Main Street", pattern = "breakout_seq = parse_lvls%(%[%[(.-)%]%]%)"},
   }
 
   for _, set in ipairs(lvl_sets) do
@@ -247,55 +248,61 @@ local function simulate_turn(lvl, pokes, fire, fire_dir, crossing_nudges)
   local already_moved = {fire = false}
   for i in pairs(pokes) do already_moved[i] = false end
 
-  local momentum_included = false
+  local priority_pass = false
+  local momentum_pass = false
   local moved = true
   while moved do
     moved = false
 
     for i, poke in pairs(pokes) do
       if not already_moved[i] then
-        local valid_intentions = calc_valid_intents(lvl, pokes, fire, poke, "poke", intentions_per_poke[i], momentum_included)
-
-        local can_move, intent = should_move(valid_intentions)
-        if can_move and intent then
-          poke.x = intent.x
-          poke.y = intent.y
-          poke.dir = intent.dir
-          poke.moving = not not intent.dir
-          already_moved[i] = true
-          moved = true
-          break
-        else
-          if #valid_intentions > 2 or (#valid_intentions == 2 and valid_intentions[1].redirected == true and valid_intentions[2].redirected == true) then
-            return false, "Arrow ambiguous direction"
+        if not priority_pass or not towards_flame(fire, poke, intentions_per_poke[i]) then
+          local valid_intentions = calc_valid_intents(lvl, pokes, fire, poke, "poke", intentions_per_poke[i], priority_pass or momentum_pass)
+          local can_move, intent = should_move(valid_intentions)
+          if can_move and intent then
+            poke.x = intent.x
+            poke.y = intent.y
+            poke.dir = intent.dir
+            poke.moving = not not intent.dir
+            already_moved[i] = true
+            moved = true
+            break
+          else
+            if #valid_intentions > 2 or (#valid_intentions == 2 and valid_intentions[1].redir == true and valid_intentions[2].redir == true) then
+              return false, "Arrow ambiguous direction"
+            end
           end
         end
       end
     end
 
-    if not moved and not momentum_included then
-      momentum_included = true
+    if not moved and not priority_pass and not momentum_pass then
+      priority_pass = true
       moved = true
     end
 
     if not moved and not already_moved.fire then
       local valid_intentions = calc_valid_intents(lvl, pokes, fire, fire, "fire", fire_intentions, true)
-
       local can_move, intent = should_move(valid_intentions)
       if can_move and intent then
         fire.x = intent.x
         fire.y = intent.y
-
         if intent.dir then
           fire_dir = intent.dir
         end
         already_moved.fire = true
         moved = true
       else
-        if #valid_intentions > 2 or (#valid_intentions == 2 and valid_intentions[1].redirected == true and valid_intentions[2].redirected == true) then
+        if #valid_intentions > 2 or (#valid_intentions == 2 and valid_intentions[1].redir == true and valid_intentions[2].redir == true) then
           return false, "Fire ambiguous direction"
         end
       end
+    end
+
+    if not moved and not momentum_pass then
+      priority_pass = false
+      momentum_pass = true
+      moved = true
     end
   end
 

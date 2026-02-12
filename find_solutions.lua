@@ -18,7 +18,7 @@ local function load_functions_from_main()
   file:close()
 
   local function extract_simple_function(func_name)
-    local pattern = "(local function " .. func_name .. "%b().-\nend)\n"
+    local pattern = "(function " .. func_name .. "%b().-\nend)\n"
     local match = content:match(pattern)
     if match then
       return match
@@ -28,7 +28,7 @@ local function load_functions_from_main()
 
   -- Extract function with nested functions by finding matching end at same indentation
   local function extract_complex_function(func_name)
-    local start_pattern = "local function " .. func_name .. "("
+    local start_pattern = "function " .. func_name .. "("
     local start_pos = content:find(start_pattern, 1, true)
     if not start_pos then
       error("Could not find function: " .. func_name)
@@ -119,26 +119,27 @@ end
   chunk = chunk .. extract_simple_function("calc_poke_intents") .. "\n"
   chunk = chunk .. extract_simple_function("calc_fire_intents") .. "\n"
   chunk = chunk .. extract_simple_function("calc_valid_intents") .. "\n"
+  chunk = chunk .. extract_simple_function("towards_flame") .. "\n"
   chunk = chunk .. extract_simple_function("detect_nudges") .. "\n"
   chunk = chunk .. extract_complex_function("parse_lvls") .. "\n"
 
-  chunk = chunk .. "return next_position, is_valid_move, should_move, poke_redirects, calc_poke_intents, calc_fire_intents, calc_valid_intents, detect_nudges, parse_lvls"
+  chunk = chunk .. "return next_position, is_valid_move, should_move, poke_redirects, calc_poke_intents, calc_fire_intents, calc_valid_intents, towards_flame, detect_nudges, parse_lvls"
 
   local loader, err = load(chunk, "main.lua functions")
   if not loader then
     error("Could not load functions from main.lua: " .. tostring(err))
   end
 
-  local success, result1, result2, result3, result4, result5, result6, result7, result8, result9 = pcall(loader)
+  local success, result1, result2, result3, result4, result5, result6, result7, result8, result9, result10 = pcall(loader)
   if not success then
     error("Error executing loaded functions: " .. tostring(result1))
   end
 
-  return result1, result2, result3, result4, result5, result6, result7, result8, result9
+  return result1, result2, result3, result4, result5, result6, result7, result8, result9, result10
 end
 
 print("Loading game logic from main.lua...")
-local next_position, is_valid_move, should_move, poke_redirects, calc_poke_intents, calc_fire_intents, calc_valid_intents, detect_nudges, parse_lvls = load_functions_from_main()
+local next_position, is_valid_move, should_move, poke_redirects, calc_poke_intents, calc_fire_intents, calc_valid_intents, towards_flame, detect_nudges, parse_lvls = load_functions_from_main()
 
 -- Helper to add items to table
 local function add(t, v)
@@ -198,40 +199,41 @@ local function simulate_lvl(lvl, initial_pokes, max_steps)
     local already_moved = {fire = false}
     for i in pairs(pokes) do already_moved[i] = false end
 
-    local momentum_included = false
+    local priority_pass = false
+    local momentum_pass = false
     local moved = true
     while moved do
       moved = false
 
       for i, poke in pairs(pokes) do
         if not already_moved[i] then
-          local valid_intentions = calc_valid_intents(lvl, pokes, fire, poke, "poke", intentions_per_poke[i], momentum_included)
-          local can_move, intent = should_move(valid_intentions)
-
-          if can_move and intent then
-            poke.x = intent.x
-            poke.y = intent.y
-            poke.dir = intent.dir
-            already_moved[i] = true
-            moved = true
-            break
-          else
-            if #valid_intentions > 2 or (#valid_intentions == 2 and valid_intentions[1].redirected == true and valid_intentions[2].redirected == true) then
-              return false, "ambiguous poke"
+          if not priority_pass or not towards_flame(fire, poke, intentions_per_poke[i]) then
+            local valid_intentions = calc_valid_intents(lvl, pokes, fire, poke, "poke", intentions_per_poke[i], priority_pass or momentum_pass)
+            local can_move, intent = should_move(valid_intentions)
+            if can_move and intent then
+              poke.x = intent.x
+              poke.y = intent.y
+              poke.dir = intent.dir
+              already_moved[i] = true
+              moved = true
+              break
+            else
+              if #valid_intentions > 2 or (#valid_intentions == 2 and valid_intentions[1].redir == true and valid_intentions[2].redir == true) then
+                return false, "ambiguous poke"
+              end
             end
           end
         end
       end
 
-      if not moved and not momentum_included then
-        momentum_included = true
+      if not moved and not priority_pass and not momentum_pass then
+        priority_pass = true
         moved = true
       end
 
       if not moved and not already_moved.fire then
         local valid_intentions = calc_valid_intents(lvl, pokes, fire, fire, "fire", fire_intentions, true)
         local can_move, intent = should_move(valid_intentions)
-
         if can_move and intent then
           fire.x = intent.x
           fire.y = intent.y
@@ -241,10 +243,16 @@ local function simulate_lvl(lvl, initial_pokes, max_steps)
           already_moved.fire = true
           moved = true
         else
-          if #valid_intentions > 2 or (#valid_intentions == 2 and valid_intentions[1].redirected == true and valid_intentions[2].redirected == true) then
+          if #valid_intentions > 2 or (#valid_intentions == 2 and valid_intentions[1].redir == true and valid_intentions[2].redir == true) then
             return false, "ambiguous fire"
           end
         end
+      end
+
+      if not moved and not momentum_pass then
+        priority_pass = false
+        momentum_pass = true
+        moved = true
       end
     end
 
@@ -543,11 +551,11 @@ main_file:close()
 
 -- Extract lvl data for the specific world
 local world_map = {
-  ["Tutorial Town"] = "tutorial_sequence",
-  ["Silver Hollow"] = "reuse_sequence",
-  ["Winnow Park"] = "clearing_sequence",
-  ["Cannonball Court"] = "cannon_sequence",
-  ["Main Street"] = "breakout_sequence"
+  ["Tutorial Town"] = "tutorial_seq",
+  ["Silver Hollow"] = "reuse_seq",
+  ["Winnow Park"] = "clearing_seq",
+  ["Cannonball Court"] = "cannon_seq",
+  ["Main Street"] = "breakout_seq"
 }
 
 local var_name = world_map[world_name]
