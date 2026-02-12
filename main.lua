@@ -2,74 +2,74 @@
 -- by MXTXC
 PICO8_WIDTH = 128
 PICO8_HEIGHT = 128
-local grid_x = 11
-local grid_y = 11
-local grid_size = 11
-local cursor_x = flr((grid_size + 1) / 2)
-local cursor_y = flr((grid_size + 1) / 2)
-local grid_start_x = 5
-local grid_start_y = 9
-local lvl = {}
-local remaining_pokes = 0
-local game_state = "title"
-local raindrops = {}
-local rain_speed = 1
-local rain_move_interval = 4
-local rain_frame_counter = 0
-local world_index = 1
-local world_picker_sel = "world"
-local settings_sel = 1
-local particles_enabled = true
-local coordinates_enabled = false
-local music_enabled = true
-local lvls = {}
-local pokes = {}
-local fire = {x = nil, y = nil}
-local turn_time = false
-local turn_timer = 0
-local fire_dir = nil
-local lvl_timer = 0
-local lvl_index = 1
-local success_sound_played = false
-local failure_sound_played = false
-local goal_lit = false
-local frames_in_step = 12
-local step_counter = 0
-local max_steps = 30
-local pre_turn_pokes = nil
-local fire_animation_timer = 0
-local fire_animation_sprites = {8,9,10}
-local blink_timer = 0
-local burst_radius = 0
-local fire_fail_animation_frame = 0
-local fire_fail_animation_sprites = {26, 27, 28}
-local fire_visible = true
-local burst_active = false
-local burst_speed = 3.5
-local current_text = ""
-local all_worlds_completed = false
-local step_sfx = 60
-local failure_sfx = 62
-local success_sfx = 63
-local menu_action_sfx = 57
-local nav_sfx = 59
-local cursor_colors = {5,6,7}
-local cursor_step = 1
-local cursor_steps_per_frame = 10
-local flash = nil
-local flash_frames = 0
-local help_text_colors = {5,6,7}
-local help_text_color_step = 1
-local help_text_color_steps = 10
-local nudges = {}
-local blinking_pokes = {}
-local blinking_step = 1
-local blinking_steps = 8
-local delete_save_data_button_label = "Delete save data"
-local toggle_music_button_label = "Disable music"
-local z_press_count = 0
-local z_press_timer = 0
-local large_alphabet = {
+grid_x = 11
+grid_y = 11
+grid_size = 11
+cursor_x = flr((grid_size + 1) / 2)
+cursor_y = flr((grid_size + 1) / 2)
+grid_start_x = 5
+grid_start_y = 9
+lvl = {}
+remaining_pokes = 0
+game_state = "title"
+raindrops = {}
+rain_speed = 1
+rain_move_interval = 4
+rain_frame_counter = 0
+world_index = 1
+world_picker_sel = "world"
+settings_sel = 1
+particles_enabled = true
+coordinates_enabled = false
+music_enabled = true
+lvls = {}
+pokes = {}
+fire = {x = nil, y = nil}
+turn_time = false
+turn_timer = 0
+fire_dir = nil
+lvl_timer = 0
+lvl_index = 1
+success_sound_played = false
+failure_sound_played = false
+goal_lit = false
+frames_in_step = 12
+step_counter = 0
+max_steps = 30
+pre_turn_pokes = nil
+fire_animation_timer = 0
+fire_animation_sprites = {8,9,10}
+blink_timer = 0
+burst_radius = 0
+fire_fail_animation_frame = 0
+fire_fail_animation_sprites = {26, 27, 28}
+fire_visible = true
+burst_active = false
+burst_speed = 3.5
+current_text = ""
+all_worlds_completed = false
+step_sfx = 60
+failure_sfx = 62
+success_sfx = 63
+menu_action_sfx = 57
+nav_sfx = 59
+cursor_colors = {5,6,7}
+cursor_step = 1
+cursor_steps_per_frame = 10
+flash = nil
+flash_frames = 0
+help_text_colors = {5,6,7}
+help_text_color_step = 1
+help_text_color_steps = 10
+nudges = {}
+blinking_pokes = {}
+blinking_step = 1
+blinking_steps = 8
+delete_save_data_button_label = "Delete save data"
+toggle_music_button_label = "Disable music"
+z_press_count = 0
+z_press_timer = 0
+large_alphabet = {
  ["a"]={0xff,0xff,0xc3,0xc3,0xc3,0xc3,0xff,0xff,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3},
  ["b"]={0xfe,0xff,0xc3,0xc3,0xc3,0xfe,0xfe,0xc3,0xc3,0xc3,0xc3,0xc3,0xc3,0xff,0xfe,0xfe},
  ["c"]={0xff,0xff,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xc0,0xff,0xff},
@@ -1105,12 +1105,14 @@ local function calc_fire_intents(lvl, pokes, fire, fire_dir, nudges)
   return intents
 end
 
-local function calc_valid_intents(lvl, pokes, fire, entity, entity_type, intents)
+local function calc_valid_intents(lvl, pokes, fire, entity, entity_type, intents, include_momentum)
   local valid_intents = {}
   for _, intent in ipairs(intents) do
-    if (intent.x ~= entity.x or intent.y ~= entity.y)
-      and is_valid_move(lvl, pokes, fire, entity_type, intent.x, intent.y) then
-      add(valid_intents, intent)
+    if intent.redirected == true or include_momentum then
+      if (intent.x ~= entity.x or intent.y ~= entity.y)
+        and is_valid_move(lvl, pokes, fire, entity_type, intent.x, intent.y) then
+        add(valid_intents, intent)
+      end
     end
   end
   return valid_intents
@@ -1280,7 +1282,7 @@ local function handle_turn()
   local destinations_per_poke = {}
 
   for i, poke in pairs(pokes) do
-    local valid_intents = calc_valid_intents(lvl, pokes, fire, poke, "poke", intents_per_poke[i])
+    local valid_intents = calc_valid_intents(lvl, pokes, fire, poke, "poke", intents_per_poke[i], true)
     local can_move, intent = should_move(valid_intents)
 
     if can_move and intent then
@@ -1305,12 +1307,14 @@ local function handle_turn()
   for i in pairs(pokes) do already_moved[i] = false end
 
   local moved = true
+  local momentum_included = false
+
   while moved do
     moved = false
 
     for i, poke in pairs(pokes) do
       if not already_moved[i] then
-        local valid_intents = calc_valid_intents(lvl, pokes, fire, poke, "poke", intents_per_poke[i])
+        local valid_intents = calc_valid_intents(lvl, pokes, fire, poke, "poke", intents_per_poke[i], momentum_included)
 
         local can_move, intent = should_move(valid_intents)
         if can_move and intent then
@@ -1321,7 +1325,7 @@ local function handle_turn()
           moved = true
           break
         else
-          if #valid_intents > 1 then
+          if #valid_intents > 2 or (#valid_intents == 2 and valid_intents[1].redirected == true and valid_intents[2].redirected == true) then
             rollback()
             set_flash("A PRICKLY POKE\nNEEDS CLEAR DIRECTIONS.")
             blink(valid_intents)
@@ -1331,8 +1335,13 @@ local function handle_turn()
       end
     end
 
+    if not moved and not momentum_included then
+      momentum_included = true
+      moved = true
+    end
+
     if not moved and not already_moved.fire then
-      local valid_intents = calc_valid_intents(lvl, pokes, fire, fire, "fire", fire_intents)
+      local valid_intents = calc_valid_intents(lvl, pokes, fire, fire, "fire", fire_intents, true)
 
       local can_move, intent = should_move(valid_intents)
       if can_move and intent then
@@ -1344,7 +1353,7 @@ local function handle_turn()
         already_moved.fire = true
         moved = true
       else
-        if #valid_intents > 1 then
+        if #valid_intents > 2 or (#valid_intents == 2 and valid_intents[1].redirected == true and valid_intents[2].redirected == true) then
           rollback()
           set_flash("A FICKLE FLAME\nNEEDS CLEAR DIRECTIONS.")
           blink(valid_intents)

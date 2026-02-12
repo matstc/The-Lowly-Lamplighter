@@ -167,7 +167,7 @@ local function simulate_lvl(lvl, initial_pokes, max_steps)
       return true, steps
     end
 
-    -- Simulate one turn
+    -- Simulate one turn (same logic as handle_turn in main.lua)
     local intentions_per_poke = {}
     local original_positions = {fire = {x = fire.x, y = fire.y}}
 
@@ -176,18 +176,36 @@ local function simulate_lvl(lvl, initial_pokes, max_steps)
       original_positions[i] = {x = poke.x, y = poke.y}
     end
 
+    -- Prevent two pokes from moving onto the same cell (Phase 1.5)
+    local destinations_per_poke = {}
+    for i, poke in pairs(pokes) do
+      local valid_intents = calc_valid_intents(lvl, pokes, fire, poke, "poke", intentions_per_poke[i], true)
+      local can_move, intent = should_move(valid_intents)
+      if can_move and intent then
+        destinations_per_poke[i] = {x = intent.x, y = intent.y}
+      end
+    end
+    for i, a in pairs(destinations_per_poke) do
+      for j, b in pairs(destinations_per_poke) do
+        if i ~= j and a.x == b.x and a.y == b.y then
+          return false, "two pokes same cell"
+        end
+      end
+    end
+
     local fire_intentions = calc_fire_intents(lvl, pokes, fire, fire_dir, crossing_nudges)
 
     local already_moved = {fire = false}
     for i in pairs(pokes) do already_moved[i] = false end
 
+    local momentum_included = false
     local moved = true
     while moved do
       moved = false
 
       for i, poke in pairs(pokes) do
         if not already_moved[i] then
-          local valid_intentions = calc_valid_intents(lvl, pokes, fire, poke, "poke", intentions_per_poke[i])
+          local valid_intentions = calc_valid_intents(lvl, pokes, fire, poke, "poke", intentions_per_poke[i], momentum_included)
           local can_move, intent = should_move(valid_intentions)
 
           if can_move and intent then
@@ -197,14 +215,21 @@ local function simulate_lvl(lvl, initial_pokes, max_steps)
             already_moved[i] = true
             moved = true
             break
-          elseif can_move == false and #valid_intentions > 0 then
-            return false, "ambiguous poke"
+          else
+            if #valid_intentions > 2 or (#valid_intentions == 2 and valid_intentions[1].redirected == true and valid_intentions[2].redirected == true) then
+              return false, "ambiguous poke"
+            end
           end
         end
       end
 
+      if not moved and not momentum_included then
+        momentum_included = true
+        moved = true
+      end
+
       if not moved and not already_moved.fire then
-        local valid_intentions = calc_valid_intents(lvl, pokes, fire, fire, "fire", fire_intentions)
+        local valid_intentions = calc_valid_intents(lvl, pokes, fire, fire, "fire", fire_intentions, true)
         local can_move, intent = should_move(valid_intentions)
 
         if can_move and intent then
@@ -215,8 +240,10 @@ local function simulate_lvl(lvl, initial_pokes, max_steps)
           end
           already_moved.fire = true
           moved = true
-        elseif can_move == false and #valid_intentions > 0 then
-          return false, "ambiguous fire"
+        else
+          if #valid_intentions > 2 or (#valid_intentions == 2 and valid_intentions[1].redirected == true and valid_intentions[2].redirected == true) then
+            return false, "ambiguous fire"
+          end
         end
       end
     end
@@ -493,15 +520,15 @@ if not world_name then
   print("Usage: lua find_solutions.lua <world_name> [lvl_num] [max_solutions] [options]")
   print("")
   print("Examples:")
-  print("  lua find_solutions.lua \"Tutorial Village\" 1")
-  print("  lua find_solutions.lua \"Tutorial Village\"              # Run all lvls")
+  print("  lua find_solutions.lua \"Tutorial Town\" 1")
+  print("  lua find_solutions.lua \"Tutorial Town\"              # Run all lvls")
   print("")
   print("Options:")
   print("  -v, --verbose              Show detailed progress")
   print("  --no-early-stop            Don't terminate simulations early")
   print("")
   print("Available worlds:")
-  print("  - Tutorial Village")
+  print("  - Tutorial Town")
   print("  - Winnow Park")
   print("  - Silver Hollow")
   print("  - Cannonball Court")

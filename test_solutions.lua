@@ -193,7 +193,7 @@ local function load_lvls()
 
   -- Extract each lvl set
   local lvl_sets = {
-    {name = "Tutorial Village", pattern = "tutorial_sequence = parse_lvls%(%[%[(.-)%]%]%)"},
+    {name = "Tutorial Town", pattern = "tutorial_sequence = parse_lvls%(%[%[(.-)%]%]%)"},
     {name = "Winnow Park", pattern = "clearing_sequence = parse_lvls%(%[%[(.-)%]%]%)"},
     {name = "Silver Hollow", pattern = "reuse_sequence = parse_lvls%(%[%[(.-)%]%]%)"},
     {name = "Cannonball Court", pattern = "cannon_sequence = parse_lvls%(%[%[(.-)%]%]%)"},
@@ -226,18 +226,36 @@ local function simulate_turn(lvl, pokes, fire, fire_dir, crossing_nudges)
     original_positions[i] = {x = poke.x, y = poke.y}
   end
 
+  -- Prevent two pokes from moving onto the same cell (same as handle_turn Phase 1.5)
+  local destinations_per_poke = {}
+  for i, poke in pairs(pokes) do
+    local valid_intents = calc_valid_intents(lvl, pokes, fire, poke, "poke", intentions_per_poke[i], true)
+    local can_move, intent = should_move(valid_intents)
+    if can_move and intent then
+      destinations_per_poke[i] = {x = intent.x, y = intent.y}
+    end
+  end
+  for i, a in pairs(destinations_per_poke) do
+    for j, b in pairs(destinations_per_poke) do
+      if i ~= j and a.x == b.x and a.y == b.y then
+        return false, "Two pokes same cell", fire_dir, crossing_nudges
+      end
+    end
+  end
+
   local fire_intentions = calc_fire_intents(lvl, pokes, fire, fire_dir, crossing_nudges)
 
   local already_moved = {fire = false}
   for i in pairs(pokes) do already_moved[i] = false end
 
+  local momentum_included = false
   local moved = true
   while moved do
     moved = false
 
     for i, poke in pairs(pokes) do
       if not already_moved[i] then
-        local valid_intentions = calc_valid_intents(lvl, pokes, fire, poke, "poke", intentions_per_poke[i])
+        local valid_intentions = calc_valid_intents(lvl, pokes, fire, poke, "poke", intentions_per_poke[i], momentum_included)
 
         local can_move, intent = should_move(valid_intentions)
         if can_move and intent then
@@ -249,15 +267,20 @@ local function simulate_turn(lvl, pokes, fire, fire_dir, crossing_nudges)
           moved = true
           break
         else
-          if #valid_intentions > 1 then
+          if #valid_intentions > 2 or (#valid_intentions == 2 and valid_intentions[1].redirected == true and valid_intentions[2].redirected == true) then
             return false, "Arrow ambiguous direction"
           end
         end
       end
     end
 
+    if not moved and not momentum_included then
+      momentum_included = true
+      moved = true
+    end
+
     if not moved and not already_moved.fire then
-      local valid_intentions = calc_valid_intents(lvl, pokes, fire, fire, "fire", fire_intentions)
+      local valid_intentions = calc_valid_intents(lvl, pokes, fire, fire, "fire", fire_intentions, true)
 
       local can_move, intent = should_move(valid_intentions)
       if can_move and intent then
@@ -270,7 +293,7 @@ local function simulate_turn(lvl, pokes, fire, fire_dir, crossing_nudges)
         already_moved.fire = true
         moved = true
       else
-        if #valid_intentions > 1 then
+        if #valid_intentions > 2 or (#valid_intentions == 2 and valid_intentions[1].redirected == true and valid_intentions[2].redirected == true) then
           return false, "Fire ambiguous direction"
         end
       end
