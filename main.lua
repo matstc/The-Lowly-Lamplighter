@@ -1508,37 +1508,44 @@ function reset_lvl(next_lvl)
   end
 end
 
+function reset_level_handler()
+  sfx(menu_action_sfx)
+  reset_lvl(false)
+end
+
+function skip_level_handler()
+  sfx(menu_action_sfx)
+  if lvl.outro then
+    current_text = lvl.outro
+    game_state = "lvl_outro"
+  else
+    reset_lvl(true)
+  end
+end
+
+function skip_back_level_handler()
+  sfx(menu_action_sfx)
+  if lvl_idx > 1 then
+    lvl_idx = lvl_idx - 1
+    reset_lvl(false)
+  else
+    game_state = "world_picker"
+  end
+end
+
 function check_cheat_codes()
   if btnp(3, 1) then
-    sfx(menu_action_sfx)
-    reset_lvl(false)
+    reset_level_handler()
     return true
   end
 
   if btnp(2, 1) then
-    sfx(menu_action_sfx)
-    if lvl_idx > 1 then
-      lvl_idx = lvl_idx - 1
-      reset_lvl(false)
-    else
-      game_state = "world_picker"
-    end
+    skip_back_level_handler()
+    return true
   end
 
-  if btnp(4, 0) then
-    z_press_count = z_press_count + 1
-  end
-
-  if btnp(1, 1) or z_press_count >= 5 then
-    z_press_count = 0
-    sfx(menu_action_sfx)
-    if lvl.outro then
-      current_text = lvl.outro
-      game_state = "lvl_outro"
-    else
-      reset_lvl(true)
-    end
-
+  if btnp(1, 1) then
+    skip_level_handler()
     return true
   end
 
@@ -1623,8 +1630,8 @@ function draw_fire()
       if fire_animation_timer >= frames_in_step * #fire_animation_sprites then
         fire_animation_timer = 0
       end
-      local fire_sprite_index = flr((fire_animation_timer / frames_in_step) % #fire_animation_sprites) + 1
-      sprite = fire_animation_sprites[fire_sprite_index]
+      local fire_sprite_idx = flr((fire_animation_timer / frames_in_step) % #fire_animation_sprites) + 1
+      sprite = fire_animation_sprites[fire_sprite_idx]
     end
 
     spr(sprite, grid_start_x + (fire.draw_x-1) * grid_x, grid_start_y + (fire.draw_y-1) * grid_y)
@@ -2026,17 +2033,12 @@ function _init()
 end
 
 function _update()
-  poke(0x5f30, 1) -- suppress menu
   spawn_raindrops()
-  blink_timer = blink_timer + 1
+  menuitem(1)
+  menuitem(2)
+  menuitem(3)
 
-  if z_press_count > 0 then
-    z_press_timer = z_press_timer + 1
-    if z_press_timer > 60 then
-      z_press_count = 0
-      z_press_timer = 0
-    end
-  end
+  blink_timer = blink_timer + 1
 
   if burst_active then
     burst_radius = burst_radius + burst_speed
@@ -2213,6 +2215,24 @@ function _update()
   if game_state == "game" then
     local cancel_update = check_cheat_codes()
     if cancel_update then return end
+
+    menuitem(1, "Reset level",
+      function()
+        reset_level_handler()
+      end
+    )
+
+    menuitem(2, "Skip level",
+      function()
+        skip_level_handler()
+      end
+    )
+
+    menuitem(3, "Skip back",
+      function()
+        skip_back_level_handler()
+      end
+    )
   end
 
   if not turn_time then
