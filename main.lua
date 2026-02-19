@@ -1487,13 +1487,13 @@ function reset_lvl(next_lvl)
   cursor_x = flr((grid_size + 1) / 2)
   cursor_y = flr((grid_size + 1) / 2)
 
-  if pre_turn_pokes then
-    if lvl.pokes then
-      for _, a in pairs(lvl.pokes) do
-        pokes[#pokes+1] = make_poke(a, true)
-      end
+  if lvl.pokes then
+    for _, a in pairs(lvl.pokes) do
+      pokes[#pokes+1] = make_poke(a, true)
     end
+  end
 
+  if pre_turn_pokes then
     for _, a in pairs(pre_turn_pokes) do
       pokes[#pokes+1] = make_poke(a, false)
     end
@@ -1501,9 +1501,6 @@ function reset_lvl(next_lvl)
     remaining_pokes = (lvl.max or 9) - #pre_turn_pokes
     pre_turn_pokes = nil
   else
-    for i,a in pairs(lvl.pokes) do
-      pokes[i] = make_poke(a, true)
-    end
     remaining_pokes = lvl.max or 9
   end
 end
