@@ -1514,6 +1514,7 @@ function check_cheat_codes()
 
   if btnp(2, 1) then
     sfx(menu_action_sfx)
+    pre_turn_pokes = nil
     if lvl_idx > 1 then
       lvl_idx = lvl_idx - 1
       reset_lvl(false)
