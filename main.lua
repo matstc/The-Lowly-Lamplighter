@@ -765,8 +765,8 @@ local breakout_seq = parse_lvls([[{
     goal={9,10},
     obs={{4,5},{5,4},{9,1},{10,6}},
     pokes={{x=5,y=8,rot=2},{x=6,y=7,rot=3},{x=7,y=6,rot=2},{x=7,y=8,rot=2},{x=8,y=5,rot=2},{x=10,y=4,rot=3},{x=11,y=10,rot=1}},
-    max=4,
-    solution={{x=6,y=10,rot=1},{x=6,y=11,rot=1},{x=7,y=7,rot=4},{x=9,y=5,rot=4}},
+    max=3,
+    solution={{x=6,y=5,rot=3},{x=7,y=7,rot=1},{x=5,y=9,rot=1}},
     outro="The campfire.\nThe crossroads.\nThe main street.\n\nWhere neighbors go to catch the light."
   }
 }]])
